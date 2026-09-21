@@ -480,11 +480,11 @@ function stmtView(){
   if(!p){view.name="home";return homeView()}
   const c=p.cur||"IQD";
   let run=0;
-  const body=entriesOf(p.id).map(e=>{
+  /* الكشف للزبون: الحركات الفعلية بس. صفحة الطرف تبقى تعرض الملغي مشطوب إلك. */
+  const body=entriesOf(p.id).filter(e=>!e.voided&&e.kind!=="void").map(e=>{
     run+=e.sign*e.amount;
-    const voided=!!e.voided||e.kind==="void";
     const fx=fxLine(e);
-    return `<tr class="${voided?"v":""}">
+    return `<tr>
       <td class="num">${dmy(e.date)}</td>
       <td>${esc(e.desc||KLABEL[e.kind]||"")}${fx?`<small class="num">${fx}</small>`:""}</td>
       <td class="n num">${e.sign>0?money(e.amount,c):""}</td>
