@@ -147,7 +147,10 @@ main{flex:1;padding-bottom:104px}
 
 .sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(9,16,20,.55);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:560px;max-height:94dvh;overflow-y:auto;background:var(--surface);
-  border-radius:16px 16px 0 0;padding:6px 14px calc(18px + env(safe-area-inset-bottom,0px))}
+  border-radius:16px 16px 0 0;padding:6px 14px calc(18px + env(safe-area-inset-bottom,0px));position:relative}
+.sheetx{position:absolute;top:8px;inset-inline-end:8px;width:44px;height:44px;border-radius:10px;
+  display:grid;place-items:center;font-size:20px;color:var(--ink-2);z-index:2}
+.sheetx:active{background:var(--shade)}
 .grab{width:38px;height:4px;border-radius:2px;background:var(--line-strong);margin:8px auto 14px}
 .sheet h2{margin:0 0 16px;font-size:18px;font-weight:600}
 .field{margin-bottom:16px}
@@ -325,7 +328,7 @@ function balWordShort(b){
 function balWordLong(b,type){
   if(Math.abs(b)<0.005)return{cls:"zero",word:"الحساب مصفّر",n:0};
   if(b>0)return{cls:"pos",word:type==="worker"?"سحب زيادة":"عليه إلك",n:b};
-  return{cls:"neg",word:"إلك عليه",n:-b};
+  return{cls:"neg",word:"له عليك",n:-b};
 }
 function fxLine(e){
   if(!e.fx)return"";
@@ -361,10 +364,10 @@ function homeView(){
     <div class="sumrow">
       ${shown.length>1?`<div class="sumcur">${CUR[c].label}</div>`:""}
       <div class="c"><span>عليهم إلك</span><b class="num pos">${money(tot[c].p,c)}</b></div>
-      <div class="c"><span>إلك عليهم</span><b class="num neg">${money(tot[c].n,c)}</b></div>
+      <div class="c"><span>لهم عليك</span><b class="num neg">${money(tot[c].n,c)}</b></div>
     </div>`).join(""):`<div class="sumrow">
       <div class="c"><span>عليهم إلك</span><b class="num zero">0</b></div>
-      <div class="c"><span>إلك عليهم</span><b class="num zero">0</b></div></div>`;
+      <div class="c"><span>لهم عليك</span><b class="num zero">0</b></div></div>`;
   return `
   <div class="topbar">
     <div class="topbar-row">
@@ -430,7 +433,7 @@ function partyView(){
   if(p.type==="worker"&&p.rate)meta.push(money(p.rate,c)+" للساعة");
   return `
   <div class="topbar"><div class="topbar-row">
-    <button class="back" data-act="home">‹ رجوع</button>
+    <button class="back" data-act="back">‹ رجوع</button>
     <button class="iconbtn" data-act="editparty" data-id="${p.id}">✎</button>
   </div></div>
   <main>
@@ -438,7 +441,10 @@ function partyView(){
       <div class="name">${esc(p.name)}</div>
       <div class="meta">${esc(meta.join(" · "))}</div>
       <div class="bigbal"><b class="num ${w.cls}">${money(w.n,c)}</b><em>${w.word}</em></div>
-      <div class="phead-acts"><button class="ghost" data-act="stmt" data-id="${p.id}">كشف الحساب</button></div>
+      <div class="phead-acts">
+        <button class="ghost" data-act="stmt" data-id="${p.id}">كشف الحساب</button>
+        <button class="ghost" data-act="share" data-id="${p.id}">رابط للزبون</button>
+      </div>
     </div>
     ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,c)).join(""):
       `<div class="empty">ماكو حركات بعد.<br>دوس «أضف حركة» تحت.</div>`}
@@ -488,7 +494,7 @@ function stmtView(){
   const w=balWordShort(Math.round(run*100)/100);
   return `
   <div class="topbar"><div class="topbar-row">
-    <button class="back" data-act="open" data-id="${p.id}">‹ رجوع</button>
+    <button class="back" data-act="back">‹ رجوع</button>
     <button class="iconbtn" data-act="print">🖨</button>
   </div></div>
   <main><div class="stmt">
@@ -505,16 +511,17 @@ function stmtView(){
 /* ================= actions ================= */
 function onAct(ev){
   const el=ev.currentTarget,a=el.dataset.act,id=el.dataset.id;
-  if(a==="tab"){view.type=el.dataset.type;view.q="";view.limit=PAGE;render()}
+  if(a==="tab"){view.type=el.dataset.type;view.q="";view.limit=PAGE;history.replaceState(navState(),"");render()}
   else if(a==="more"){view.limit+=PAGE;paintList()}
-  else if(a==="open"){view.name="party";view.partyId=id;render();window.scrollTo(0,0)}
-  else if(a==="home"){view.name="home";render()}
+  else if(a==="open")go({name:"party",partyId:id});
+  else if(a==="back")goBack();
   else if(a==="newparty")partySheet(null);
   else if(a==="editparty")partySheet(parties.find(p=>p.id===id));
   else if(a==="newentry")entrySheet(id,null);
   else if(a==="correct"){const e=entries.find(x=>x.id===id);if(e&&!e.voided)entrySheet(e.partyId,e)}
   else if(a==="void")doVoid(id);
-  else if(a==="stmt"){view.name="stmt";view.partyId=id;render();window.scrollTo(0,0)}
+  else if(a==="stmt")go({name:"stmt",partyId:id});
+  else if(a==="share")shareSheet(id);
   else if(a==="print")window.print();
   else if(a==="theme")toggleTheme();
   else if(a==="sync"){settings.syncUrl?doSync(true):settingsSheet()}
@@ -538,9 +545,11 @@ async function doVoid(eid){
 /* ================= sheets ================= */
 function openSheet(html){
   const layer=document.getElementById("layer");
-  layer.innerHTML=`<div class="sheet-bg" id="sbg"><div class="sheet">${html}</div></div>`;
+  layer.innerHTML=`<div class="sheet-bg" id="sbg"><div class="sheet">
+    <button class="sheetx" id="sx" aria-label="إغلاق">✕</button>${html}</div></div>`;
   document.body.style.overflow="hidden";
-  document.getElementById("sbg").addEventListener("click",e=>{if(e.target.id==="sbg")closeSheet()});
+  /* no tap-outside close on purpose: only the X or the sheet's own buttons close it */
+  document.getElementById("sx").onclick=closeSheet;
 }
 function closeSheet(){document.getElementById("layer").innerHTML="";document.body.style.overflow=""}
 function autogrow(ta){ta.style.height="auto";ta.style.height=Math.max(88,ta.scrollHeight)+"px"}
@@ -591,7 +600,7 @@ function partySheet(p){
     else{target={id:uid(),type:t,name,phone,cur,rate,created:new Date().toISOString(),
       updated:Date.now(),synced:false};
       parties.push(target);byParty.set(target.id,[]);bal.set(target.id,0);
-      view.name="party";view.partyId=target.id}
+      view.name="party";view.partyId=target.id;history.pushState(navState(),"")}
     await put("parties",target);closeSheet();render();queueSync();
   };
 }
@@ -818,7 +827,100 @@ function settingsSheet(){
   };
 }
 
+/* ================= navigation ================= */
+/* كل شاشة تنضاف لسجل المتصفح، حتى إيماءة الرجوع بالتلفون ترجع شاشة وحدة
+   بدل ما تطلع من البرنامج كامل. */
+function navState(){return{name:view.name,partyId:view.partyId,type:view.type}}
+function go(st){
+  view.name=st.name;if(st.partyId)view.partyId=st.partyId;
+  history.pushState(navState(),"");
+  render();window.scrollTo(0,0);
+}
+function goBack(){
+  if(history.state&&history.state.name&&history.state.name!=="home")history.back();
+  else{view.name="home";history.replaceState(navState(),"");render()}
+}
+window.addEventListener("popstate",ev=>{
+  /* نافذة إدخال مفتوحة: الإيماءة ما تسكرها — تبقى لحد ما تدوس X */
+  if(document.querySelector("#layer .sheet-bg")){history.pushState(navState(),"");return}
+  const st=ev.state||{name:"home"};
+  view.name=st.name||"home";
+  if(st.partyId)view.partyId=st.partyId;
+  if(st.type)view.type=st.type;
+  render();window.scrollTo(0,0);
+});
+
 /* ================= sync ================= */
+
+/* ---- customer link ---- */
+function randSlug(){
+  var s="",abc="abcdefghijkmnpqrstuvwxyz23456789";
+  if(window.crypto&&crypto.getRandomValues){
+    var a=new Uint8Array(18);crypto.getRandomValues(a);
+    for(var i=0;i<18;i++)s+=abc[a[i]%abc.length];
+  }else{for(var j=0;j<18;j++)s+=abc[Math.floor(Math.random()*abc.length)]}
+  return s;
+}
+function waNumber(phone){
+  var d=String(phone||"").replace(/\D/g,"");
+  if(!d)return"";
+  if(d.indexOf("00")===0)d=d.slice(2);
+  if(d.indexOf("964")===0)return d;
+  if(d.indexOf("0")===0)d=d.slice(1);
+  if(d.length===10&&d.indexOf("7")===0)return"964"+d;
+  return d.length>=9?"964"+d:"";
+}
+async function shareSheet(pid){
+  const p=parties.find(x=>x.id===pid);
+  if(!p)return;
+  if(!settings.syncUrl){
+    openSheet(`<div class="grab"></div><h2>رابط الزبون</h2>
+      <div class="hint" style="margin-bottom:16px">الرابط يقرا من كوكل شيت، فلازم تربط المزامنة أول.
+      افتح الإعدادات وحط رابط المزامنة والرمز.</div>
+      <button class="primary" id="ok">تمام</button>`);
+    document.getElementById("ok").onclick=closeSheet;return;
+  }
+  let fresh=false;
+  if(!p.pub){p.pub=randSlug();p.updated=Date.now();p.synced=false;await put("parties",p);fresh=true}
+  const link=settings.syncUrl+"?s="+p.pub;
+  const wa=waNumber(p.phone);
+  const txt="كشف حسابك مع "+(settings.name||"الورشة")+":\n"+link;
+
+  openSheet(`<div class="grab"></div>
+    <h2>رابط حساب ${esc(p.name)}</h2>
+    <div class="hint" style="margin:-8px 0 14px">صفحة عربية تتحدث لحالها كل ما تسجل حركة.
+      أي واحد يوصله الرابط يشوفها، فما تنرسل إلا للزبون نفسه.</div>
+    <div class="field"><textarea id="lk" readonly
+      style="min-height:78px;font-size:12px;direction:ltr;text-align:left">${esc(link)}</textarea></div>
+    <div id="warn">${!p.synced?`<div class="conv" style="margin-bottom:14px">الرابط ما اشتغل بعد
+      <small>لازم يوصل الشيت أول — دوس «فعّل الرابط» تحت</small></div>`:""}</div>
+    <div class="two" style="margin-bottom:10px">
+      <button class="ghost" id="cp">نسخ الرابط</button>
+      <button class="ghost" id="op">افتحه</button>
+    </div>
+    ${wa?`<button class="ghost" id="wa" style="width:100%;margin-bottom:10px">إرسال بالواتساب</button>`:""}
+    <button class="ghost" id="rv" style="width:100%;margin-bottom:14px">إلغاء الرابط وإصدار واحد جديد</button>
+    <button class="primary" id="ok">${p.synced?"تمام":"فعّل الرابط"}</button>`);
+
+  document.getElementById("cp").onclick=async()=>{
+    try{await navigator.clipboard.writeText(link);document.getElementById("cp").textContent="انتسخ ✓"}
+    catch(e){const t=document.getElementById("lk");t.focus();t.select();
+      document.getElementById("cp").textContent="حدّده وانسخه بإيدك"}
+  };
+  document.getElementById("op").onclick=()=>window.open(link,"_blank","noopener");
+  if(wa)document.getElementById("wa").onclick=()=>
+    window.open("https://wa.me/"+wa+"?text="+encodeURIComponent(txt),"_blank","noopener");
+  document.getElementById("rv").onclick=async()=>{
+    if(!confirm("الرابط القديم راح يتوقف نهائياً وأي واحد عنده ما يشوف الحساب. تكمل؟"))return;
+    p.pub=randSlug();p.updated=Date.now();p.synced=false;
+    await put("parties",p);closeSheet();await doSync(true);shareSheet(pid);
+  };
+  document.getElementById("ok").onclick=async()=>{
+    closeSheet();
+    if(!p.synced)await doSync(true);
+  };
+  if(fresh)queueSync();
+}
 function pendingCount(){
   let n=0;
   for(const p of parties)if(!p.synced)n++;
@@ -949,7 +1051,7 @@ function toggleTheme(){
 }
 try{const t=localStorage.getItem("ledger_theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}
 
-loadAll().then(()=>{render();if(settings.syncUrl)setTimeout(()=>doSync(false),600)}).catch(e=>{
+loadAll().then(()=>{history.replaceState(navState(),"");render();if(settings.syncUrl)setTimeout(()=>doSync(false),600)}).catch(e=>{
   console.error(e);
   document.getElementById("app").innerHTML=`<div class="empty">ما فتحت قاعدة البيانات.<br>جرّب تفتح الصفحة بنافذة عادية مو خاصة.</div>`;
 });
