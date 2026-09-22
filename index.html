@@ -78,6 +78,11 @@ main{flex:1;padding-bottom:104px}
 .sumrow b{font-size:18px;font-weight:600;letter-spacing:-.02em}
 
 .rows{background:var(--surface);border-bottom:1px solid var(--line)}
+.sortbar{display:flex;align-items:center;gap:6px;padding:10px 14px 8px}
+.sortbar span{font-size:12.5px;color:var(--ink-3);margin-inline-end:4px}
+.sortbar button{min-height:34px;padding:0 13px;border-radius:17px;font-size:13px;font-weight:500;
+  color:var(--ink-2);background:var(--shade)}
+.sortbar button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600}
 .row{width:100%;display:flex;align-items:center;gap:12px;min-height:62px;padding:10px 14px;
   text-align:start;border-bottom:1px solid var(--line);content-visibility:auto;contain-intrinsic-size:auto 62px}
 .row:last-child{border-bottom:none}
@@ -265,7 +270,7 @@ const CUR={IQD:{label:"دينار",short:"د.ع"},USD:{label:"دولار",short:
 const PAGE=80;
 
 let receipts=[]; /* الإيصالات: مستقلة تماماً عن الحسابات، ما تنزامن */
-let parties=[], entries=[], settings={name:"",lastRate:0,syncUrl:"",token:"",lastPull:0,lastSyncAt:0};
+let parties=[], entries=[], settings={name:"",lastRate:0,syncUrl:"",token:"",lastPull:0,lastSyncAt:0,sort:"recent"};
 let syncState="idle"; /* idle | busy | ok | err | off */
 let syncMsg="";
 const byParty=new Map(), bal=new Map();
@@ -353,13 +358,15 @@ async function saveSettings(){
 
 /* ================= index ================= */
 const cmpEntry=(a,b)=>a.date===b.date?a.created.localeCompare(b.created):a.date.localeCompare(b.date);
+const lastAct=new Map(); /* آخر وقت انسجلت بيه حركة لكل طرف — للترتيب حسب آخر حركة */
+function bumpAct(e){const c=e.created||"";if(c>(lastAct.get(e.partyId)||""))lastAct.set(e.partyId,c)}
 function reindex(){
-  byParty.clear();bal.clear();
+  byParty.clear();bal.clear();lastAct.clear();
   for(const p of parties){byParty.set(p.id,[]);bal.set(p.id,0)}
   for(const e of entries){
     let a=byParty.get(e.partyId);
     if(!a){a=[];byParty.set(e.partyId,a);bal.set(e.partyId,0)}
-    a.push(e);bal.set(e.partyId,bal.get(e.partyId)+e.sign*e.amount);
+    a.push(e);bal.set(e.partyId,bal.get(e.partyId)+e.sign*e.amount);bumpAct(e);
   }
   for(const a of byParty.values())a.sort(cmpEntry);
 }
@@ -367,7 +374,7 @@ function addToIndex(e){
   let a=byParty.get(e.partyId);
   if(!a){a=[];byParty.set(e.partyId,a);bal.set(e.partyId,0)}
   a.push(e);a.sort(cmpEntry);
-  bal.set(e.partyId,(bal.get(e.partyId)||0)+e.sign*e.amount);
+  bal.set(e.partyId,(bal.get(e.partyId)||0)+e.sign*e.amount);bumpAct(e);
 }
 const entriesOf=pid=>byParty.get(pid)||[];
 const balanceOf=pid=>Math.round((bal.get(pid)||0)*100)/100;
@@ -404,11 +411,13 @@ function fxLine(e){
 /* ================= render ================= */
 function render(){
   const app=document.getElementById("app");
+  const keepY=window.scrollY;
   app.innerHTML = view.name==="party"?partyView() : view.name==="stmt"?stmtView()
     : view.name==="rlist"?rListView() : view.name==="redit"?rEditView() : view.name==="rview"?rDocView()
     : homeView();
   if(view.name==="redit")bindEditor();
   bind(app);
+  window.scrollTo(0,keepY);
   const s=app.querySelector("#q");
   if(s){
     s.value=view.q;let t=null;
@@ -453,6 +462,11 @@ function homeView(){
   </div>
   <main>
     <div class="sumblock">${sum}</div>
+    <div class="sortbar">
+      <span>الترتيب</span>
+      <button data-act="sort" data-s="recent" aria-pressed="${settings.sort!=="alpha"}">آخر حركة</button>
+      <button data-act="sort" data-s="alpha" aria-pressed="${settings.sort==="alpha"}">أبجدي</button>
+    </div>
     <div id="listholder">${partyRows()}</div>
   </main>
   <div class="bottombar">
@@ -471,7 +485,11 @@ function partyRows(){
   }
   if(!list.length)
     return `<div class="empty">${q?"ماكو نتيجة تطابق البحث.":"القائمة فارغة.<br>أضف "+TYPES[view.type].one+" حتى تبدي التسجيل."}</div>`;
-  list.sort((a,b)=>Math.abs(balanceOf(b.id))-Math.abs(balanceOf(a.id)));
+  if(settings.sort==="alpha")list.sort((a,b)=>a.name.localeCompare(b.name,"ar"));
+  else list.sort((a,b)=>{
+    const x=lastAct.get(b.id)||b.created||"",y=lastAct.get(a.id)||a.created||"";
+    return x<y?-1:x>y?1:0;
+  });
   const shown=list.slice(0,view.limit);
   let html=`<div class="rows">`+shown.map(p=>{
     const c=p.cur||"IQD",w=balWordShort(balanceOf(p.id)),n=entriesOf(p.id).length;
@@ -497,7 +515,7 @@ function partyView(){
   const c=p.cur||"IQD";
   const es=entriesOf(p.id),b=balanceOf(p.id),w=balWordLong(b,p.type);
   let run=0;
-  const withRun=es.map(e=>{run+=e.sign*e.amount;return{e,run:Math.round(run*100)/100}}).reverse();
+  const withRun=es.map(e=>{run+=e.sign*e.amount;return{e,run:Math.round(run*100)/100}}); /* الأقدم فوق مثل الدفتر */
   const meta=[TYPES[p.type].one,"حساب بال"+CUR[c].label];
   if(p.phone)meta.splice(1,0,p.phone);
   if(p.type==="worker"&&p.rate)meta.push(money(p.rate,c)+" للساعة");
@@ -592,6 +610,9 @@ function onAct(ev){
   else if(a==="void")doVoid(id);
   else if(a==="stmt")go({name:"stmt",partyId:id});
   else if(a==="share")shareSheet(id);
+  else if(a==="sort"){settings.sort=el.dataset.s;saveSettings();
+      document.querySelectorAll(".sortbar button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===settings.sort));
+      view.limit=PAGE;paintList()}
   else if(a==="rlist")go({name:"rlist"});
   else if(a==="ropen")go({name:"rview",rid:id});
   else if(a==="rnew"){draft=blankDraft();draftDirty=false;go({name:"redit"})}
@@ -819,7 +840,7 @@ function entrySheet(pid,src){
     if(isHours())ent.rate=p.rate||0;
     entries.push(ent);addToIndex(ent);touched.push(ent);
     await putMany("entries",touched);
-    closeSheet();render();queueSync();
+    closeSheet();render();toBottom();queueSync();
   };
   setTimeout(()=>{const a=document.getElementById("am");if(a)a.focus()},60);
 }
@@ -1157,10 +1178,15 @@ function rDocView(){
 /* كل شاشة تنضاف لسجل المتصفح، حتى إيماءة الرجوع بالتلفون ترجع شاشة وحدة
    بدل ما تطلع من البرنامج كامل. */
 function navState(){return{name:view.name,partyId:view.partyId,type:view.type,rid:view.rid}}
+function toBottom(){
+  const f=()=>window.scrollTo(0,document.documentElement.scrollHeight);
+  f();requestAnimationFrame(f);setTimeout(f,60);   /* مرتين حتى تستقر أطوال السطور */
+}
+function land(){view.name==="party"?toBottom():window.scrollTo(0,0)}
 function go(st){
   view.name=st.name;if(st.partyId)view.partyId=st.partyId;if(st.rid)view.rid=st.rid;
   history.pushState(navState(),"");
-  render();window.scrollTo(0,0);
+  render();land();
 }
 function goBack(){
   if(history.state&&history.state.name&&history.state.name!=="home")history.back();
@@ -1180,7 +1206,7 @@ window.addEventListener("popstate",ev=>{
   if(st.partyId)view.partyId=st.partyId;
   if(st.type)view.type=st.type;
   if(st.rid)view.rid=st.rid;
-  render();window.scrollTo(0,0);
+  render();land();
 });
 
 /* ================= sync ================= */
