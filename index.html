@@ -190,6 +190,57 @@ tfoot td{font-weight:700;font-size:15.5px;border-top:1.5px solid var(--line-stro
   .topbar,.bottombar{display:none!important}
   main{padding-bottom:0}
 }
+
+/* ---------- receipts ---------- */
+.ghost.side{flex:0 0 auto;min-height:52px;padding-inline:18px;border-radius:11px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;position:relative}
+.item .field{margin-bottom:10px}
+.item .field:last-child{margin-bottom:0}
+.item-x{position:absolute;top:6px;inset-inline-end:6px;width:40px;height:40px;border-radius:9px;
+  display:grid;place-items:center;color:var(--ink-3);font-size:17px}
+.item-x:active{background:var(--shade)}
+.item-num{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-bottom:8px}
+.item-sum{font-size:14px;color:var(--ink-2);text-align:end;margin-top:4px}
+.edwrap{padding:14px}
+.edwrap .field input,.edwrap .field textarea{background:var(--surface)}
+.addline{width:100%;min-height:50px;border:1.5px dashed var(--line-strong);border-radius:12px;
+  font-size:15px;font-weight:500;color:var(--accent);margin-bottom:18px}
+.addline:active{background:var(--shade)}
+.totalbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+.totalbox b{display:block;font-size:26px;font-weight:600;letter-spacing:-.02em}
+.totalbox span{display:block;font-size:13.5px;color:var(--ink-2);margin-top:4px;line-height:1.6}
+.sechead{font-size:14px;font-weight:600;color:var(--ink-2);margin:4px 2px 10px}
+
+/* the receipt itself: always paper-white, in both themes */
+.docwrap{padding:14px}
+.doc{background:#fff;color:#111;border-radius:6px;padding:28px 22px 34px;
+  box-shadow:0 1px 4px rgba(0,0,0,.12);font-size:14px;line-height:1.55}
+.doc h1{margin:0 0 18px;text-align:center;font-size:26px;font-weight:700;letter-spacing:-.01em;
+  padding-bottom:14px;border-bottom:2px solid #111}
+.doc .meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px;margin-bottom:6px}
+.doc .meta b{font-weight:600}
+.doc .to{font-size:15px;margin:10px 0 16px}
+.doc .to b{font-weight:600}
+.doc table{width:100%;border-collapse:collapse;margin:0;font-size:13.5px}
+.doc th{background:#f1f3f4;color:#111;font-weight:600;font-size:12.5px;padding:8px 6px;
+  border:1px solid #bbb;text-align:center}
+.doc td{padding:8px 6px;border:1px solid #bbb;vertical-align:top;color:#111}
+.doc td.c{text-align:center;white-space:nowrap}
+.doc td.n{text-align:left;white-space:nowrap;direction:ltr}
+.doc td.desc{white-space:pre-wrap;word-break:break-word}
+.doc tfoot td{font-weight:700;font-size:14.5px;background:#f7f8f9}
+.doc .words{margin-top:10px;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid #bbb;background:#fafafa}
+.doc .notes{margin-top:14px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
+.doc .notes b{display:block;margin-bottom:2px}
+.doc .signs{display:flex;gap:24px;margin-top:48px}
+.doc .signs div{flex:1;border-top:1px solid #111;padding-top:6px;text-align:center;font-size:12.5px;color:#444}
+.doc .scroll{overflow-x:auto}
+@media print{
+  @page{size:A4;margin:14mm}
+  .docwrap{padding:0}
+  .doc{box-shadow:none;border-radius:0;padding:0}
+  .doc th,.doc tfoot td,.doc .words{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -213,6 +264,7 @@ const KLABEL={work:"عمل",pay:"تسديد",buy:"شراء",hours:"ساعات",v
 const CUR={IQD:{label:"دينار",short:"د.ع"},USD:{label:"دولار",short:"$"}};
 const PAGE=80;
 
+let receipts=[]; /* الإيصالات: مستقلة تماماً عن الحسابات، ما تنزامن */
 let parties=[], entries=[], settings={name:"",lastRate:0,syncUrl:"",token:"",lastPull:0,lastSyncAt:0};
 let syncState="idle"; /* idle | busy | ok | err | off */
 let syncMsg="";
@@ -224,14 +276,25 @@ let idb=null;
 function openIDB(){
   return new Promise((res,rej)=>{
     if(!("indexedDB" in window))return rej(new Error("no idb"));
-    const r=indexedDB.open(DBNAME,1);
+    const r=indexedDB.open(DBNAME,2);
     r.onupgradeneeded=()=>{
       const d=r.result;
       if(!d.objectStoreNames.contains("parties"))d.createObjectStore("parties",{keyPath:"id"});
       if(!d.objectStoreNames.contains("entries"))d.createObjectStore("entries",{keyPath:"id"});
       if(!d.objectStoreNames.contains("meta"))d.createObjectStore("meta",{keyPath:"k"});
+      if(!d.objectStoreNames.contains("receipts"))d.createObjectStore("receipts",{keyPath:"id"});
     };
-    r.onsuccess=()=>res(r.result);
+    r.onsuccess=()=>{
+      const db=r.result;
+      /* لو انفتحت نسخة أحدث بمكان ثاني، هذي تسكر نفسها بدل ما تعلّقها */
+      db.onversionchange=()=>{db.close();location.reload()};
+      res(db);
+    };
+    r.onblocked=()=>{
+      const a=document.getElementById("app");
+      if(a)a.innerHTML=`<div class="empty">البرنامج مفتوح بمكان ثاني بنسخة قديمة.<br>
+        سكّر كل نوافذ وتبويبات الدفتر، وافتحه مرة وحدة.</div>`;
+    };
     r.onerror=()=>rej(r.error);
   });
 }
@@ -248,7 +311,7 @@ async function putMany(store,arr){
 function lsMirror(){
   try{
     if(parties.length+entries.length>4000)return;
-    localStorage.setItem(LSKEY,JSON.stringify({v:3,parties,entries,settings}));
+    localStorage.setItem(LSKEY,JSON.stringify({v:4,parties,entries,settings,receipts}));
   }catch(e){}
 }
 function readLS(){
@@ -264,6 +327,7 @@ async function loadAll(){
   try{idb=await openIDB()}catch(e){idb=null;console.warn("IndexedDB unavailable",e)}
   if(idb){
     parties=await req(tx("parties","readonly").getAll());
+    try{receipts=await req(tx("receipts","readonly").getAll())}catch(e){receipts=[]}
     entries=await req(tx("entries","readonly").getAll());
     const s=await req(tx("meta","readonly").get("settings"));
     if(s&&s.val)settings=Object.assign(settings,s.val);
@@ -318,7 +382,9 @@ const dmy=iso=>{if(!iso)return"";const p=iso.split("-");return p[2]+"/"+p[1]+"/"
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const appName=()=>settings.name&&settings.name.trim()?settings.name.trim():"دفتر";
-const numOf=s=>parseFloat(String(s).replace(/[^\d.]/g,""))||0;
+const numOf=s=>{s=String(s==null?"":s)
+  .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+  .replace(/٫/g,".");return parseFloat(s.replace(/[^\d.]/g,""))||0};
 const other=c=>c==="IQD"?"USD":"IQD";
 function balWordShort(b){
   if(Math.abs(b)<0.005)return{cls:"zero",word:"مصفّر",n:0};
@@ -338,7 +404,10 @@ function fxLine(e){
 /* ================= render ================= */
 function render(){
   const app=document.getElementById("app");
-  app.innerHTML = view.name==="party"?partyView() : view.name==="stmt"?stmtView() : homeView();
+  app.innerHTML = view.name==="party"?partyView() : view.name==="stmt"?stmtView()
+    : view.name==="rlist"?rListView() : view.name==="redit"?rEditView() : view.name==="rview"?rDocView()
+    : homeView();
+  if(view.name==="redit")bindEditor();
   bind(app);
   const s=app.querySelector("#q");
   if(s){
@@ -387,6 +456,7 @@ function homeView(){
     <div id="listholder">${partyRows()}</div>
   </main>
   <div class="bottombar">
+    <button class="ghost side" data-act="rlist">الإيصالات</button>
     <button class="primary" data-act="newparty">إضافة ${TYPES[t].one}</button>
   </div>`;
 }
@@ -522,6 +592,22 @@ function onAct(ev){
   else if(a==="void")doVoid(id);
   else if(a==="stmt")go({name:"stmt",partyId:id});
   else if(a==="share")shareSheet(id);
+  else if(a==="rlist")go({name:"rlist"});
+  else if(a==="ropen")go({name:"rview",rid:id});
+  else if(a==="rnew"){draft=blankDraft();draftDirty=false;go({name:"redit"})}
+  else if(a==="redit"){const r=receipts.find(x=>x.id===id);if(r){draft=cloneRec(r);draftDirty=false;go({name:"redit"})}}
+  else if(a==="rdup"){const r=receipts.find(x=>x.id===id);if(r){
+      draft=cloneRec(r);draft.id=null;draft.created=null;draft.no=nextRef(lastRef());draft.date=today();
+      draftDirty=true;go({name:"redit"})}}
+  else if(a==="raddline"){draft.items.push({d:"",q:"1",p:""});draftDirty=true;render();
+      const cards=document.querySelectorAll("#r-items .item"),last=cards[cards.length-1];
+      if(last){last.scrollIntoView({block:"center"});last.querySelector(".it-d").focus()}}
+  else if(a==="rdelline"){const i=+el.dataset.i;
+      const it=draft.items[i];
+      if((String(it.d||"").trim()||numOf(it.p))&&!confirm("تحذف البند "+(i+1)+"؟"))return;
+      draft.items.splice(i,1);draftDirty=true;render()}
+  else if(a==="rsave")rSave();
+  else if(a==="rdel")rDel(id);
   else if(a==="print")window.print();
   else if(a==="theme")toggleTheme();
   else if(a==="sync"){settings.syncUrl?doSync(true):settingsSheet()}
@@ -770,7 +856,7 @@ function settingsSheet(){
     <button class="primary" id="ok">حفظ</button>`);
   const io=document.getElementById("io");
   document.getElementById("exp").onclick=()=>{
-    const json=JSON.stringify({v:3,parties,entries,settings});
+    const json=JSON.stringify({v:4,parties,entries,settings,receipts});
     io.innerHTML=`<div class="field"><textarea id="jx" style="min-height:120px;font-size:12px;direction:ltr;text-align:left">${esc(json)}</textarea>
       <div class="two"><button class="ghost" id="cp">نسخ النص</button><button class="ghost" id="dl">تنزيل ملف</button></div></div>`;
     document.getElementById("cp").onclick=async()=>{
@@ -796,6 +882,7 @@ function settingsSheet(){
         if(!Array.isArray(d.parties)||!Array.isArray(d.entries))throw 0;
         if(!confirm("راح تنمسح البيانات الحالية بالكامل وتنحط بدالها. متأكد؟"))return;
         parties=d.parties;entries=d.entries;
+        const hasR=Array.isArray(d.receipts);if(hasR)receipts=d.receipts;
         if(d.settings)settings=Object.assign(settings,d.settings);
         normalize();
         if(idb){
@@ -803,6 +890,9 @@ function settingsSheet(){
             t.objectStore("parties").clear();t.objectStore("entries").clear();
             t.oncomplete=res;t.onerror=()=>rej(t.error)});
           await putMany("parties",parties);await putMany("entries",entries);await saveSettings();
+          if(hasR){await new Promise((res,rej)=>{const t=idb.transaction("receipts","readwrite");
+            t.objectStore("receipts").clear();t.oncomplete=res;t.onerror=()=>rej(t.error)});
+            await putMany("receipts",receipts);}
         }else lsMirror();
         reindex();closeSheet();render();
       }catch(e){alert("النص مو صالح. تأكد إنك لصقت نسخة كاملة.")}
@@ -827,12 +917,248 @@ function settingsSheet(){
   };
 }
 
+/* ================= receipts (مستقلة عن الحسابات) ================= */
+function tafqeetInt(n){
+  n=Math.floor(Math.abs(n));
+  if(n===0)return"صفر";
+  const ones=["","واحد","اثنان","ثلاثة","أربعة","خمسة","ستة","سبعة","ثمانية","تسعة"];
+  const teens=["عشرة","أحد عشر","اثنا عشر","ثلاثة عشر","أربعة عشر","خمسة عشر","ستة عشر","سبعة عشر","ثمانية عشر","تسعة عشر"];
+  const tens=["","","عشرون","ثلاثون","أربعون","خمسون","ستون","سبعون","ثمانون","تسعون"];
+  const hund=["","مائة","مائتان","ثلاثمائة","أربعمائة","خمسمائة","ستمائة","سبعمائة","ثمانمائة","تسعمائة"];
+  function under1000(x){
+    const h=Math.floor(x/100),r=x%100,parts=[];
+    if(h)parts.push(hund[h]);
+    if(r){
+      if(r<10)parts.push(ones[r]);
+      else if(r<20)parts.push(teens[r-10]);
+      else{const o=r%10,t=Math.floor(r/10);parts.push(o?ones[o]+" و"+tens[t]:tens[t])}
+    }
+    return parts.join(" و");
+  }
+  const scales=[null,["ألف","ألفان","آلاف"],["مليون","مليونان","ملايين"],["مليار","ملياران","مليارات"]];
+  const groups=[];let x=n;while(x>0){groups.push(x%1000);x=Math.floor(x/1000)}
+  const out=[];
+  for(let i=groups.length-1;i>=0;i--){
+    const g=groups[i];if(!g)continue;
+    if(i===0){out.push(under1000(g));continue}
+    const s=scales[i];
+    if(g===1)out.push(s[0]);
+    else if(g===2)out.push(s[1]);
+    else if(g<=10)out.push(under1000(g)+" "+s[2]);
+    else out.push(under1000(g)+" "+s[0]);
+  }
+  return out.join(" و");
+}
+function amountWords(v,cur){
+  v=Math.round(Math.abs(v)*100)/100;
+  if(cur==="USD"){
+    const d=Math.floor(v),c=Math.round((v-d)*100);
+    let s="فقط "+tafqeetInt(d)+" دولار أمريكي";
+    if(c)s+=" و"+tafqeetInt(c)+" سنت";
+    return s+" لا غير";
+  }
+  return "فقط "+tafqeetInt(Math.round(v))+" دينار عراقي لا غير";
+}
+function nextRef(prev){
+  prev=String(prev||"").trim();
+  if(!prev)return"0001";
+  const m=prev.match(/^(.*?)(\d+)(\D*)$/);
+  if(!m)return prev+"-2";
+  return m[1]+String(Number(m[2])+1).padStart(m[2].length,"0")+m[3];
+}
+/* آخر رقم = رقم آخر إيصال انشأ (مو آخر واحد انعدل)، حتى تعديل إيصال قديم ما يرجّع العداد */
+function lastRef(){
+  let best=null;
+  for(const r of receipts)if(!best||r.created>best.created)best=r;
+  return best?best.no:(settings.lastRef||"");
+}
+const nfq=new Intl.NumberFormat("en-US",{maximumFractionDigits:3});
+function rTotal(r){return roundCur(r.items.reduce((s,it)=>s+roundCur(numOf(it.q)*numOf(it.p),r.cur),0),r.cur)}
+
+let draft=null, draftDirty=false;
+function blankDraft(){
+  return{id:null,no:nextRef(lastRef()),date:today(),to:"",cur:"IQD",
+    items:[{d:"",q:"1",p:""}],notes:"",created:null};
+}
+function cloneRec(r){return JSON.parse(JSON.stringify(r))}
+
+function rListView(){
+  const list=receipts.slice().sort((a,b)=>b.created.localeCompare(a.created));
+  return `
+  <div class="topbar"><div class="topbar-row">
+    <button class="back" data-act="back">‹ رجوع</button>
+  </div></div>
+  <main>
+    <div class="phead" style="padding-bottom:14px">
+      <div class="name">الإيصالات</div>
+      <div class="meta">${list.length} إيصال · مستقلة عن الحسابات</div>
+    </div>
+    ${list.length?`<div class="rows">${list.map(r=>`
+      <button class="row" data-act="ropen" data-id="${r.id}">
+        <div class="row-main">
+          <div class="row-name">${esc(r.to||"بدون اسم")}</div>
+          <div class="row-sub"><span class="num">${esc(r.no)}</span> · <span class="num">${dmy(r.date)}</span></div>
+        </div>
+        <div class="row-bal"><b class="num">${money(rTotal(r),r.cur)}</b><span>${CUR[r.cur].label}</span></div>
+      </button>`).join("")}</div>`
+    :`<div class="empty">ماكو إيصالات بعد.<br>دوس «إيصال جديد» تحت.</div>`}
+  </main>
+  <div class="bottombar"><button class="primary" data-act="rnew">إيصال جديد</button></div>`;
+}
+
+function itemCard(it,i){
+  return `<div class="item" data-i="${i}">
+    <div class="item-num">بند ${i+1}</div>
+    ${draft.items.length>1?`<button class="item-x" data-act="rdelline" data-i="${i}" aria-label="حذف البند">✕</button>`:""}
+    <div class="field"><textarea class="it-d" rows="2" placeholder="وصف الشغل" style="min-height:56px">${esc(it.d)}</textarea></div>
+    <div class="two">
+      <div class="field"><label>الكمية</label>
+        <input class="it-q amt-input" inputmode="decimal" value="${esc(it.q)}" style="font-size:20px!important"></div>
+      <div class="field"><label>السعر</label>
+        <input class="it-p amt-input" inputmode="decimal" value="${esc(it.p)}" placeholder="0" style="font-size:20px!important"></div>
+    </div>
+    <div class="item-sum num it-s"></div>
+  </div>`;
+}
+
+function rEditView(){
+  if(!draft){view.name="rlist";return rListView()}
+  const d=draft;
+  return `
+  <div class="topbar"><div class="topbar-row">
+    <button class="back" data-act="back">‹ رجوع</button>
+    <h1 style="flex:0 1 auto">${d.id?"تعديل إيصال":"إيصال جديد"}</h1>
+  </div></div>
+  <main><div class="edwrap">
+    <div class="two">
+      <div class="field"><label for="r-no">رقم مرجعي</label>
+        <input id="r-no" value="${esc(d.no)}" autocomplete="off" style="direction:ltr;text-align:start"></div>
+      <div class="field"><label for="r-dt">التاريخ</label>
+        <input id="r-dt" type="date" value="${esc(d.date)}"></div>
+    </div>
+    <div class="field"><label for="r-to">السادة / الجهة</label>
+      <input id="r-to" value="${esc(d.to)}" autocomplete="off" placeholder="اسم الشركة أو الشخص"></div>
+    <div class="field"><label>العملة</label>
+      <div class="picker" id="r-cur">${Object.keys(CUR).map(k=>
+        `<button type="button" data-c="${k}" aria-pressed="${k===d.cur}">${CUR[k].label}</button>`).join("")}</div></div>
+    <div class="sechead">البنود</div>
+    <div id="r-items">${d.items.map((it,i)=>itemCard(it,i)).join("")}</div>
+    <button class="addline" data-act="raddline">＋ إضافة بند</button>
+    <div class="totalbox"><b class="num" id="r-total">0</b><span id="r-words"></span></div>
+    <div class="field"><label for="r-notes">ملاحظات — اختياري</label>
+      <textarea id="r-notes" rows="3" placeholder="شروط الضمان، مدة التنفيذ، أي ملاحظة">${esc(d.notes)}</textarea></div>
+  </div></main>
+  <div class="bottombar"><button class="primary" data-act="rsave">حفظ</button></div>`;
+}
+
+function bindEditor(){
+  const d=draft;if(!d)return;
+  const on=(id,f)=>{const el=document.getElementById(id);
+    if(el)el.addEventListener("input",()=>{f(el.value);draftDirty=true})};
+  on("r-no",v=>d.no=v);on("r-dt",v=>d.date=v);on("r-to",v=>d.to=v);
+  const nt=document.getElementById("r-notes");
+  nt.addEventListener("input",()=>{d.notes=nt.value;draftDirty=true;autogrow(nt)});autogrow(nt);
+  document.querySelectorAll("#r-cur button").forEach(b=>b.onclick=()=>{
+    d.cur=b.dataset.c;draftDirty=true;
+    document.querySelectorAll("#r-cur button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.c===d.cur));
+    paintTotals();
+  });
+  document.querySelectorAll("#r-items .item").forEach(card=>{
+    const it=d.items[+card.dataset.i];
+    const ta=card.querySelector(".it-d"),q=card.querySelector(".it-q"),p=card.querySelector(".it-p");
+    const grow=()=>{ta.style.height="auto";ta.style.height=Math.max(56,ta.scrollHeight)+"px"};
+    ta.addEventListener("input",()=>{it.d=ta.value;draftDirty=true;grow()});grow();
+    q.addEventListener("input",()=>{it.q=q.value;draftDirty=true;paintTotals()});
+    p.addEventListener("input",()=>{it.p=p.value;draftDirty=true;paintTotals()});
+  });
+  paintTotals();
+}
+function paintTotals(){
+  const d=draft;if(!d)return;
+  let tot=0;
+  document.querySelectorAll("#r-items .item").forEach(card=>{
+    const it=d.items[+card.dataset.i];
+    const line=roundCur(numOf(it.q)*numOf(it.p),d.cur);tot+=line;
+    card.querySelector(".it-s").textContent=line?nfq.format(numOf(it.q))+" × "+money(numOf(it.p),d.cur)+" = "+money(line,d.cur):"";
+  });
+  tot=roundCur(tot,d.cur);
+  document.getElementById("r-total").textContent=money(tot,d.cur);
+  document.getElementById("r-words").textContent=tot?amountWords(tot,d.cur):"";
+}
+
+async function rSave(){
+  const d=draft;if(!d)return;
+  d.no=String(d.no||"").trim();
+  if(!d.no){alert("اكتب الرقم المرجعي.");return}
+  const items=d.items.filter(it=>String(it.d||"").trim()||numOf(it.p));
+  if(!items.length){alert("اكتب بند واحد على الأقل.");return}
+  const dup=receipts.find(r=>r.no===d.no&&r.id!==d.id);
+  if(dup&&!confirm("الرقم "+d.no+" مستخدم بإيصال ثاني ("+(dup.to||"بدون اسم")+"). تحفظ بنفس الرقم؟"))return;
+  const now=new Date().toISOString(),isNew=!d.id;
+  const rec={id:d.id||uid(),no:d.no,date:d.date||today(),to:String(d.to||"").trim(),cur:d.cur,
+    items:items.map(it=>({d:String(it.d||"").trim(),q:String(it.q||"").trim()||"1",p:String(it.p||"").trim()})),
+    notes:String(d.notes||"").trim(),created:d.created||now,updated:now};
+  const i=receipts.findIndex(r=>r.id===rec.id);
+  if(i>-1)receipts[i]=rec;else receipts.push(rec);
+  await put("receipts",rec);
+  if(isNew){settings.lastRef=rec.no;await saveSettings()}
+  draft=null;draftDirty=false;
+  view.name="rview";view.rid=rec.id;history.replaceState(navState(),"");
+  render();window.scrollTo(0,0);
+}
+async function rDel(id){
+  const r=receipts.find(x=>x.id===id);if(!r)return;
+  if(!confirm("تحذف الإيصال "+r.no+"؟ الحذف نهائي."))return;
+  receipts=receipts.filter(x=>x.id!==id);
+  if(idb)await req(tx("receipts","readwrite").delete(id));
+  lsMirror();goBack();
+}
+
+function rDocView(){
+  const r=receipts.find(x=>x.id===view.rid);
+  if(!r){view.name="rlist";return rListView()}
+  const c=r.cur;
+  const rows=r.items.map((it,i)=>{
+    const q=numOf(it.q),p=numOf(it.p),line=roundCur(q*p,c);
+    return `<tr><td class="c num">${i+1}</td><td class="desc">${esc(it.d)}</td>
+      <td class="c num">${nfq.format(q)}</td><td class="n">${money(p,c)}</td><td class="n">${money(line,c)}</td></tr>`;
+  }).join("");
+  const total=rTotal(r);
+  return `
+  <div class="topbar"><div class="topbar-row">
+    <button class="back" data-act="back">‹ رجوع</button>
+    <button class="back" style="flex:0 0 auto;color:var(--due)" data-act="rdel" data-id="${r.id}">حذف</button>
+  </div></div>
+  <main><div class="docwrap"><div class="doc">
+    <h1>ايصال عمل</h1>
+    <div class="meta">
+      <div>رقم مرجعي: <b class="num">${esc(r.no)}</b></div>
+      <div>التاريخ: <b class="num">${dmy(r.date)}</b></div>
+    </div>
+    <div class="to">السادة / <b>${esc(r.to||"—")}</b></div>
+    <div class="scroll"><table>
+      <thead><tr><th style="width:34px">ت</th><th>البيان</th><th style="width:62px">الكمية</th>
+        <th style="width:100px">السعر</th><th style="width:110px">المبلغ</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">المجموع الكلي</td><td class="n">${money(total,c)}</td></tr></tfoot>
+    </table></div>
+    <div class="words">${amountWords(total,c)}</div>
+    ${r.notes?`<div class="notes"><b>ملاحظات:</b>${esc(r.notes)}</div>`:""}
+    <div class="signs"><div>توقيع المنفّذ</div><div>توقيع المستلم</div></div>
+  </div></div></main>
+  <div class="bottombar">
+    <button class="ghost side" data-act="rdup" data-id="${r.id}">نسخ</button>
+    <button class="ghost side" data-act="redit" data-id="${r.id}">تعديل</button>
+    <button class="primary" data-act="print">طباعة / PDF</button>
+  </div>`;
+}
+
 /* ================= navigation ================= */
 /* كل شاشة تنضاف لسجل المتصفح، حتى إيماءة الرجوع بالتلفون ترجع شاشة وحدة
    بدل ما تطلع من البرنامج كامل. */
-function navState(){return{name:view.name,partyId:view.partyId,type:view.type}}
+function navState(){return{name:view.name,partyId:view.partyId,type:view.type,rid:view.rid}}
 function go(st){
-  view.name=st.name;if(st.partyId)view.partyId=st.partyId;
+  view.name=st.name;if(st.partyId)view.partyId=st.partyId;if(st.rid)view.rid=st.rid;
   history.pushState(navState(),"");
   render();window.scrollTo(0,0);
 }
@@ -843,10 +1169,17 @@ function goBack(){
 window.addEventListener("popstate",ev=>{
   /* نافذة إدخال مفتوحة: الإيماءة ما تسكرها — تبقى لحد ما تدوس X */
   if(document.querySelector("#layer .sheet-bg")){history.pushState(navState(),"");return}
+  /* إيصال ما انحفظ: الرجوع يسأل قبل ما يضيع الشغل */
+  if(view.name==="redit"&&draftDirty){
+    history.pushState(navState(),"");
+    if(confirm("الإيصال ما انحفظ. تطلع وتخسر اللي كتبته؟")){draftDirty=false;draft=null;history.back()}
+    return;
+  }
   const st=ev.state||{name:"home"};
   view.name=st.name||"home";
   if(st.partyId)view.partyId=st.partyId;
   if(st.type)view.type=st.type;
+  if(st.rid)view.rid=st.rid;
   render();window.scrollTo(0,0);
 });
 
