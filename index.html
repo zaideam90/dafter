@@ -179,6 +179,7 @@ main{flex:1;padding-bottom:104px}
   font-size:16px;font-weight:600;color:var(--ink)}
 .conv small{display:block;font-size:12.5px;font-weight:400;color:var(--ink-3);margin-top:2px}
 .calc{font-size:14.5px;color:var(--ink-2);margin-top:8px}
+.amwords{font-size:14.5px;color:var(--ink-2);margin-top:7px;min-height:1.4em;line-height:1.5}
 
 .stmt{background:var(--surface);padding:16px 14px 24px}
 .stmt h2{margin:0;font-size:19px;font-weight:600}
@@ -649,6 +650,44 @@ async function doVoid(eid){
   const v=makeVoid(e);await putMany("entries",[e,v]);render();queueSync();
 }
 
+/* ================= live amount input ================= */
+/* فارزة كل ثلاث أرقام وإنت تكتب، والمؤشر يبقى بمكانه */
+function grp(v){
+  const s=String(v==null?"":v);if(s==="")return"";
+  const [i,d]=s.split(".");
+  const g=String(i).replace(/\B(?=(\d{3})+(?!\d))/g,",");
+  return d!==undefined?g+"."+d:g;
+}
+function liveGroup(el){
+  if(!el||el._lg)return;el._lg=1;
+  const norm=t=>t.replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/٫/g,".");
+  const fix=()=>{
+    const v=el.value,caret=el.selectionStart==null?v.length:el.selectionStart;
+    const before=norm(v.slice(0,caret)).replace(/[^\d.]/g,"").length;
+    let raw=norm(v).replace(/[^\d.]/g,"");
+    const dot=raw.indexOf(".");
+    let int=dot>-1?raw.slice(0,dot):raw;
+    const dec=dot>-1?raw.slice(dot+1).replace(/\./g,""):null;
+    int=int.replace(/^0+(?=\d)/,"");
+    const out=grp(int)+(dec!==null?"."+dec:"");
+    if(out===v)return;
+    el.value=out;
+    let seen=0,pos=0;
+    while(pos<out.length&&seen<before){if(/[\d.]/.test(out[pos]))seen++;pos++}
+    try{el.setSelectionRange(pos,pos)}catch(e){}
+  };
+  el.addEventListener("input",fix);
+  fix();
+}
+/* المبلغ بالحروف تحت الحقل — يكشف الصفر الزايد فوراً */
+function liveWords(v,cur){
+  v=Math.round(Math.abs(v)*100)/100;if(!v)return"";
+  if(cur==="USD"){const d=Math.floor(v),c=Math.round((v-d)*100);
+    return (d?tafqeetInt(d)+" دولار":"")+(c?(d?" و":"")+tafqeetInt(c)+" سنت":"")}
+  return tafqeetInt(Math.round(v))+" دينار";
+}
+
 /* ================= sheets ================= */
 function openSheet(html){
   const layer=document.getElementById("layer");
@@ -685,6 +724,7 @@ function partySheet(p){
     h.innerHTML=t==="worker"?`<div class="field"><label for="pr">سعر الساعة (${CUR[cur].label})</label>
       <input id="pr" class="amt-input" inputmode="decimal" value="${p&&p.rate?p.rate:""}">
       <div class="hint">يُنسخ مع كل تسجيل ساعات ويتجمد بيه. تغييره لاحقاً ما يمس الشهور القديمة.</div></div>`:"";
+    liveGroup(document.getElementById("pr"));
   }
   paintRate();
   document.getElementById("cp").querySelectorAll("button").forEach(b=>{
@@ -731,7 +771,8 @@ function entrySheet(pid,src){
     <div id="hrs"></div>
     <div class="field"><label for="am" id="amlab">المبلغ</label>
       <input id="am" class="amt-input" inputmode="decimal" placeholder="0"
-        value="${src?(src.fx?src.fx.amount:src.amount):""}"></div>
+        value="${src?grp(src.fx?src.fx.amount:src.amount):""}">
+      <div class="amwords" id="amw"></div></div>
     <div id="fxbox"></div>
     <div class="field"><label for="ds">البيان</label>
       <textarea id="ds" rows="3" placeholder="شنو الشغل؟">${esc(src?src.desc:"")}</textarea></div>
@@ -760,6 +801,7 @@ function entrySheet(pid,src){
     box.innerHTML=`<div class="field"><label for="rt">سعر الصرف — دينار مقابل الدولار الواحد</label>
       <input id="rt" class="rate-input" inputmode="decimal" placeholder="0" value="${keep}">
       <div class="conv" id="cv">—</div></div>`;
+    liveGroup(document.getElementById("rt"));
     document.getElementById("rt").addEventListener("input",paintConv);
     paintConv();
   }
@@ -789,6 +831,11 @@ function entrySheet(pid,src){
   }
   function paintLabel(){
     document.getElementById("amlab").textContent="المبلغ ("+CUR[inCur].label+")";
+    paintWords();
+  }
+  function paintWords(){
+    const w=document.getElementById("amw");
+    if(w)w.textContent=liveWords(numOf(document.getElementById("am").value),inCur);
   }
   function paintHours(){
     const box=document.getElementById("hrs");
@@ -799,7 +846,7 @@ function entrySheet(pid,src){
     document.getElementById("hh").addEventListener("input",()=>{
       const h=numOf(document.getElementById("hh").value);
       const amt=roundCur(h*(p.rate||0),base);
-      document.getElementById("am").value=amt||"";
+      document.getElementById("am").value=amt?grp(amt):"";paintWords();
       document.getElementById("calcline").textContent=h
         ?`${h} ساعة × ${money(p.rate||0,base)} = ${money(amt,base)}`
         :`السعر ${money(p.rate||0,base)} للساعة`;
@@ -812,7 +859,8 @@ function entrySheet(pid,src){
       kp.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.k===kind));
       paintCur();paintHours();paintFx();paintLabel()};
   });
-  document.getElementById("am").addEventListener("input",paintConv);
+  liveGroup(document.getElementById("am"));
+  document.getElementById("am").addEventListener("input",()=>{paintConv();paintWords()});
   paintCur();paintHours();paintFx();paintLabel();
 
   document.getElementById("ok").onclick=async()=>{
@@ -875,6 +923,7 @@ function settingsSheet(){
     </div>
     <div id="io"></div>
     <button class="primary" id="ok">حفظ</button>`);
+  liveGroup(document.getElementById("sr"));
   const io=document.getElementById("io");
   document.getElementById("exp").onclick=()=>{
     const json=JSON.stringify({v:4,parties,entries,settings,receipts});
@@ -1091,6 +1140,7 @@ function bindEditor(){
     ta.addEventListener("input",()=>{it.d=ta.value;draftDirty=true;grow()});grow();
     q.addEventListener("input",()=>{it.q=q.value;draftDirty=true;paintTotals()});
     p.addEventListener("input",()=>{it.p=p.value;draftDirty=true;paintTotals()});
+    liveGroup(p);
   });
   paintTotals();
 }
