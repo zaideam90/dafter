@@ -197,6 +197,59 @@ tfoot td{font-weight:700;font-size:15.5px;border-top:1.5px solid var(--line-stro
   main{padding-bottom:0}
 }
 
+
+/* ---------- اليومية والخزنة ---------- */
+.blu{color:var(--accent)}
+.entry.e-cash{border-inline-start-color:var(--accent)}
+.navtabs .tab{font-size:14px}
+.subtabs{margin-top:8px}
+.subtabs .tab{min-height:38px;font-size:13.5px}
+.gtot .sumrow b{font-size:16.5px}
+.gtot .sumrow span{font-size:12px;line-height:1.35}
+.sumrow>div.c{min-width:0}
+.sumrow b{overflow-wrap:anywhere}
+.actgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px}
+.actgrid.a3{padding-top:4px}
+.qbtn{min-height:58px;border-radius:11px;background:var(--surface);border:1.5px solid var(--line-strong);
+  font-size:15.5px;font-weight:600;color:var(--ink)}
+.qbtn:active{background:var(--shade)}
+.q-cash,.q-recv{border-color:var(--owed);color:var(--owed)}
+.q-pay,.q-buy,.q-exp{border-color:var(--due);color:var(--due)}
+.q-credit{border-color:var(--accent);color:var(--accent)}
+.notice{display:block;width:calc(100% - 28px);margin:12px 14px 0;padding:12px 14px;border-radius:10px;
+  background:var(--shade);border:1.5px dashed var(--line-strong);font-size:14px;font-weight:500;color:var(--ink-2);text-align:start}
+.notice-box{margin:0 14px;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);
+  font-size:14.5px;line-height:1.7;color:var(--ink-2)}
+.daybar{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.daybar .iconbtn{font-size:26px;font-weight:600;color:var(--accent)}
+.daymid{flex:1;display:flex;flex-direction:column;align-items:center}
+.daymid input{min-height:40px;border:1px solid var(--line);border-radius:9px;background:var(--bg);
+  padding:0 10px;font-size:16px;font-family:"IBM Plex Sans",sans-serif}
+.daymid span{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.credline{padding:10px 14px 12px;border-top:1px solid var(--line);font-size:13.5px;color:var(--ink-2)}
+.credline b{color:var(--accent);font-weight:600}
+.sechead.pad{margin:14px 14px 8px}
+.hint.pad{margin:8px 14px 0}
+.drow{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding-inline-end:14px}
+.drow:last-child{border-bottom:none}
+.drow-main{flex:1;min-width:0;text-align:start;padding:10px 14px;min-height:60px}
+button.drow-main:active{background:var(--shade)}
+.drow .row-bal b{font-size:16px}
+.drow .row-bal b+b{margin-top:2px}
+.drow.e-void{opacity:.45}
+.drow.e-void .row-name,.drow.e-void .row-bal b{text-decoration:line-through}
+.mini{font-size:12.5px;color:var(--accent);font-weight:500;min-height:34px;padding-inline:8px;border-radius:7px}
+.mini:active{background:var(--shade)}
+.row.pin{background:var(--shade)}
+.plist{border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:52dvh;overflow-y:auto}
+.vbig .sumrow b{font-size:24px}
+.expgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px}
+.expcard{background:var(--surface);border:1.5px solid var(--line-strong);border-radius:12px;padding:14px;text-align:start;min-height:112px}
+.expcard span{display:block;font-size:14px;font-weight:600;color:var(--ink-2)}
+.expcard b{display:block;font-size:24px;font-weight:600;margin-top:6px;letter-spacing:-.02em}
+.expcard b.sm{font-size:17px;margin-top:2px}
+.expcard em{display:block;font-style:normal;font-size:13px;color:var(--accent);margin-top:8px;font-weight:500}
 /* ---------- receipts ---------- */
 .ghost.side{flex:0 0 auto;min-height:52px;padding-inline:18px;border-radius:11px}
 .item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;position:relative}
@@ -262,11 +315,24 @@ const TYPES={
   worker:{label:"موظفين",one:"موظف"}
 };
 const KINDS={
-  customer:[{id:"work",label:"عمل",sign:1},{id:"pay",label:"تسديد",sign:-1}],
+  customer:[{id:"work",label:"عمل آجل",sign:1},{id:"cashwork",label:"عمل مباشر",sign:0},{id:"pay",label:"تسديد",sign:-1}],
+  walkin:[{id:"cashwork",label:"عمل مباشر",sign:0}],
   supplier:[{id:"buy",label:"شراء",sign:-1},{id:"pay",label:"تسديد",sign:1}],
   worker:[{id:"hours",label:"ساعات عمل",sign:-1},{id:"pay",label:"دفعة / سلفة",sign:1}]
 };
-const KLABEL={work:"عمل",pay:"تسديد",buy:"شراء",hours:"ساعات",void:"إلغاء"};
+const KLABEL={work:"عمل",pay:"تسديد",buy:"شراء",hours:"ساعات",void:"إلغاء",
+  cashwork:"عمل مباشر",exp:"مصروف",open:"رصيد افتتاحي",adj:"فرق جرد",fxx:"تصريف",xfer:"تحويل"};
+/* أطراف النظام: معرّفات ثابتة، فلو انسوّت بجهازين تنضم لنفس السطر بالشيت بدل ما تتكرر */
+const SYS={walkin:"sys-walkin",vault:"sys-vault",save:"sys-save",expWork:"sys-exp-work",expHome:"sys-exp-home"};
+const SYSDEF={
+  "sys-walkin":{type:"walkin",name:"زبائن (يومي)"},
+  "sys-vault":{type:"vault",name:"الخزنة العامة"},
+  "sys-save":{type:"vault",name:"خزنة التوفير"},
+  "sys-exp-work":{type:"expense",name:"مصاريف الشغل"},
+  "sys-exp-home":{type:"expense",name:"مصاريف البيت"}
+};
+const MONTHS=["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
+const TOP=["journal","home","vault","exp"];
 const CUR={IQD:{label:"دينار",short:"د.ع"},USD:{label:"دولار",short:"$"}};
 const PAGE=80;
 
@@ -275,7 +341,7 @@ let parties=[], entries=[], settings={name:"",lastRate:0,syncUrl:"",token:"",las
 let syncState="idle"; /* idle | busy | ok | err | off */
 let syncMsg="";
 const byParty=new Map(), bal=new Map();
-let view={name:"home",type:"customer",q:"",partyId:null,limit:PAGE};
+let view={name:"journal",top:"journal",type:"customer",q:"",partyId:null,limit:PAGE,day:null};
 let idb=null;
 
 /* ================= storage ================= */
@@ -415,10 +481,13 @@ function render(){
   const keepY=window.scrollY;
   app.innerHTML = view.name==="party"?partyView() : view.name==="stmt"?stmtView()
     : view.name==="rlist"?rListView() : view.name==="redit"?rEditView() : view.name==="rview"?rDocView()
-    : homeView();
+    : view.name==="home"?homeView() : view.name==="vault"?vaultView() : view.name==="exp"?expView()
+    : journalView();
   if(view.name==="redit")bindEditor();
   bind(app);
   window.scrollTo(0,keepY);
+  const di=app.querySelector("#dayin");
+  if(di)di.addEventListener("change",()=>{if(di.value){view.day=di.value;history.replaceState(navState(),"");render()}});
   const s=app.querySelector("#q");
   if(s){
     s.value=view.q;let t=null;
@@ -449,13 +518,8 @@ function homeView(){
       <div class="c"><span>لهم عليك</span><b class="num zero">0</b></div></div>`;
   return `
   <div class="topbar">
-    <div class="topbar-row">
-      <h1>${esc(appName())}</h1>
-      ${syncBadge()}
-      <button class="iconbtn" data-act="theme" title="الوضع الليلي">◐</button>
-      <button class="iconbtn" data-act="settings" title="الإعدادات">⚙</button>
-    </div>
-    <div class="tabs" role="tablist">
+    ${topRow()}
+    <div class="tabs subtabs" role="tablist">
       ${Object.keys(TYPES).map(k=>
         `<button class="tab" role="tab" aria-selected="${k===t}" data-act="tab" data-type="${k}">${TYPES[k].label}</button>`).join("")}
     </div>
@@ -468,6 +532,7 @@ function homeView(){
       <button data-act="sort" data-s="recent" aria-pressed="${settings.sort!=="alpha"}">آخر حركة</button>
       <button data-act="sort" data-s="alpha" aria-pressed="${settings.sort==="alpha"}">أبجدي</button>
     </div>
+    ${t==="customer"?walkinRow():""}
     <div id="listholder">${partyRows()}</div>
   </main>
   <div class="bottombar">
@@ -517,6 +582,7 @@ function partyView(){
   const es=entriesOf(p.id),b=balanceOf(p.id),w=balWordLong(b,p.type);
   let run=0;
   const withRun=es.map(e=>{run+=e.sign*e.amount;return{e,run:Math.round(run*100)/100}}); /* الأقدم فوق مثل الدفتر */
+  if(p.type==="walkin")return walkinView(p,withRun);
   const meta=[TYPES[p.type].one,"حساب بال"+CUR[c].label];
   if(p.phone)meta.splice(1,0,p.phone);
   if(p.type==="worker"&&p.rate)meta.push(money(p.rate,c)+" للساعة");
@@ -545,7 +611,7 @@ function partyView(){
 
 function entryRow(e,run,c){
   const voided=!!e.voided||e.kind==="void";
-  const cls=voided?"e-void":(e.sign>0?"e-pos":"e-neg");
+  const cls=voided?"e-void":(e.sign>0?"e-pos":e.sign<0?"e-neg":"e-cash");
   const rw=balWordShort(run);
   const fx=fxLine(e);
   return `<div class="entry ${cls}">
@@ -558,7 +624,7 @@ function entryRow(e,run,c){
         <button data-act="void" data-id="${e.id}">إلغاء</button></div>`}
     </div>
     <div class="e-right">
-      <div class="e-amt num ${e.sign>0?"pos":"neg"}">${e.sign>0?"+":"−"}${money(e.amount,c)}</div>
+      <div class="e-amt num ${e.sign>0?"pos":e.sign<0?"neg":"blu"}">${e.sign>0?"+":e.sign<0?"−":""}${money(e.amount,c)}</div>
       <div class="e-run num">${money(rw.n,c)} ${rw.word}</div>
     </div>
   </div>`;
@@ -576,8 +642,8 @@ function stmtView(){
     return `<tr>
       <td class="num">${dmy(e.date)}</td>
       <td>${esc(e.desc||KLABEL[e.kind]||"")}${fx?`<small class="num">${fx}</small>`:""}</td>
-      <td class="n num">${e.sign>0?money(e.amount,c):""}</td>
-      <td class="n num">${e.sign<0?money(e.amount,c):""}</td>
+      <td class="n num">${e.sign>0||e.kind==="cashwork"?money(e.amount,c):""}</td>
+      <td class="n num">${e.sign<0||e.kind==="cashwork"?money(e.amount,c):""}</td>
       <td class="n num">${money(Math.abs(Math.round(run*100)/100),c)}</td>
     </tr>`}).join("");
   const w=balWordShort(Math.round(run*100)/100);
@@ -597,10 +663,566 @@ function stmtView(){
   </div></main>`;
 }
 
+/* ================= أطراف النظام والخزنة ================= */
+async function sysParty(id){
+  let p=parties.find(x=>x.id===id);
+  if(p)return p;
+  const d=SYSDEF[id];
+  p={id,type:d.type,name:d.name,phone:"",cur:"IQD",rate:0,created:new Date().toISOString(),
+     updated:1,synced:false};
+  parties.push(p);byParty.set(id,[]);bal.set(id,0);
+  await put("parties",p);
+  return p;
+}
+const isLive=e=>!e.voided&&e.kind!=="void";
+const cashOf=e=>e.fx?{cur:e.fx.cur,amt:e.fx.amount}:{cur:e.cur,amt:e.amount};
+const addDays=(iso,n)=>{const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const monthName=ym=>{const [y,m]=ym.split("-");return MONTHS[+m-1]+" "+y};
+function pMap(){return new Map(parties.map(p=>[p.id,p]))}
+
+/* شغل الورشة الفعلي اللي يحرك الكاش: استلام، تسديد، عمل مباشر، مصروف.
+   التصريف والتحويل والجرد والافتتاحي حركات داخلية — ما تنحسب دخل ولا مصروف. */
+function flowOf(e,p){
+  if(!isLive(e))return[];
+  const t=p?p.type:"";
+  if(e.kind==="pay"){
+    const a=cashOf(e);
+    if(t==="customer")return[[a.cur,a.amt]];
+    if(t==="supplier"||t==="worker")return[[a.cur,-a.amt]];
+    return[];
+  }
+  if(e.kind==="cashwork"){const a=cashOf(e);return[[a.cur,a.amt]]}
+  if(e.kind==="exp")return[[e.cur,-e.amount]];
+  return[];
+}
+/* كل أثر حركة على الخزنة العامة: [[العملة، المبلغ]] */
+function mainFx(e,p){
+  if(!isLive(e))return[];
+  if(e.partyId===SYS.vault){
+    if(e.kind==="open")return[[e.cur,e.amount]];
+    if(e.kind==="adj")return[[e.cur,e.sign*e.amount]];
+    if(e.kind==="fxx"&&e.fx)return[[e.cur,-e.amount],[e.fx.cur,e.fx.amount]];
+    return[];
+  }
+  if(e.partyId===SYS.save)return e.kind==="xfer"?[[e.cur,-e.sign*e.amount]]:[];
+  return flowOf(e,p);
+}
+function saveFx(e){
+  if(!isLive(e)||e.partyId!==SYS.save)return[];
+  if(e.kind==="open")return[[e.cur,e.amount]];
+  if(e.kind==="adj"||e.kind==="xfer")return[[e.cur,e.sign*e.amount]];
+  return[];
+}
+/* يوم التشغيل = تاريخ الرصيد الافتتاحي. ينحفظ كحركة، فكل الأجهزة تحسب من نفس اليوم */
+function vaultStart(){
+  let s=null;
+  for(const e of entriesOf(SYS.vault))if(isLive(e)&&e.kind==="open"&&(!s||e.date<s))s=e.date;
+  return s;
+}
+function vaultBal(upto){
+  const st=vaultStart();if(!st)return null;
+  const pm=pMap(),b={IQD:0,USD:0};
+  for(const e of entries){
+    if(e.date<st||(upto&&e.date>upto))continue;
+    for(const [c,v] of mainFx(e,pm.get(e.partyId)))b[c]+=v;
+  }
+  b.IQD=roundCur(b.IQD,"IQD");b.USD=roundCur(b.USD,"USD");
+  return b;
+}
+function saveBal(){
+  const b={IQD:0,USD:0};
+  for(const e of entriesOf(SYS.save))for(const [c,v] of saveFx(e))b[c]+=v;
+  b.IQD=roundCur(b.IQD,"IQD");b.USD=roundCur(b.USD,"USD");
+  return b;
+}
+function globalTotals(){
+  const t={IQD:{g:0,r:0,any:false},USD:{g:0,r:0,any:false}};
+  for(const p of parties){
+    if(p.type!=="customer"&&p.type!=="supplier")continue;
+    const c=p.cur||"IQD",b=balanceOf(p.id);
+    t[c].any=true;
+    if(p.type==="customer"&&b>0)t[c].g+=b;
+    if(b<0)t[c].r+=-b;
+  }
+  return t;
+}
+function kindLabel(e,p){
+  if(e.kind==="pay"){
+    if(p&&p.type==="customer")return"استلام";
+    if(p&&p.type==="worker")return"دفعة موظف";
+    return"تسديد";
+  }
+  if(e.kind==="exp")return p&&p.id===SYS.expHome?"مصروف البيت":"مصروف الشغل";
+  if(e.kind==="xfer")return e.sign>0?"تحويل للتوفير":"تحويل من التوفير";
+  if(e.kind==="work")return"عمل آجل";
+  return KLABEL[e.kind]||e.kind;
+}
+
+/* ================= الشريط العلوي المشترك ================= */
+function topRow(){
+  return `<div class="topbar-row">
+      <h1>${esc(appName())}</h1>
+      ${syncBadge()}
+      <button class="iconbtn" data-act="theme" title="الوضع الليلي">◐</button>
+      <button class="iconbtn" data-act="settings" title="الإعدادات">⚙</button>
+    </div>
+    <div class="tabs navtabs" role="tablist">
+      ${[["journal","اليومية"],["home","الحسابات"],["vault","الخزنة"],["exp","المصاريف"]].map(([k,l])=>
+        `<button class="tab" role="tab" aria-selected="${view.name===k}" data-act="nav" data-v="${k}">${l}</button>`).join("")}
+    </div>`;
+}
+function curRows(obj,cells){
+  /* obj: {IQD:..,USD:..}, cells(c) → html of the cells for currency c */
+  const shown=["IQD","USD"].filter(c=>obj[c]);
+  const cs=shown.length?shown:["IQD"];
+  return cs.map(c=>`<div class="sumrow">
+      ${cs.length>1?`<div class="sumcur">${CUR[c].label}</div>`:""}${cells(c)}</div>`).join("");
+}
+
+/* ================= اليومية ================= */
+function journalView(){
+  const d=view.day||today(),isToday=d===today();
+  const gt=globalTotals(),vb=vaultBal(),pm=pMap();
+  const usd=gt.USD.any||(vb&&vb.USD!==0);
+  const head=curRows({IQD:1,USD:usd},c=>`
+      <div class="c"><span>إلك عند الزبائن</span><b class="num pos" data-t="g-${c}">${money(gt[c].g,c)}</b></div>
+      <div class="c"><span>عليك للزبائن والموردين</span><b class="num neg" data-t="r-${c}">${money(gt[c].r,c)}</b></div>
+      <div class="c"><span>الخزنة</span><b class="num blu" data-t="v-${c}">${vb?(vb[c]<0?"−":"")+money(Math.abs(vb[c]),c):"—"}</b></div>`);
+
+  const day=entries.filter(e=>e.date===d&&e.kind!=="void").sort((a,b)=>a.created.localeCompare(b.created));
+  const inn={IQD:0,USD:0},out={IQD:0,USD:0},cred={IQD:0,USD:0};
+  for(const e of day){
+    const p=pm.get(e.partyId);
+    for(const [c,v] of flowOf(e,p))v>0?inn[c]+=v:out[c]+=-v;
+    if(isLive(e)&&e.kind==="work")cred[e.cur]+=e.amount;
+  }
+  const anyUsd=inn.USD||out.USD||cred.USD;
+  const sum=curRows({IQD:1,USD:anyUsd},c=>{
+    const net=roundCur(inn[c]-out[c],c);
+    return `<div class="c"><span>دخل الخزنة</span><b class="num pos" data-t="in-${c}">${money(inn[c],c)}</b></div>
+      <div class="c"><span>طلع منها</span><b class="num neg" data-t="out-${c}">${money(out[c],c)}</b></div>
+      <div class="c"><span>الصافي</span><b class="num ${net>0?"pos":net<0?"neg":"zero"}" data-t="net-${c}">${net<0?"−":""}${money(Math.abs(net),c)}</b></div>`});
+  const credLine0=["IQD","USD"].filter(c=>cred[c]).map(c=>`<b class="num">${money(cred[c],c)}</b> ${CUR[c].label}`).join(" · ");
+
+  const Q=[["cash","عمل مباشر"],["credit","عمل آجل"],["recv","استلام"],["pay","تسديد"],["buy","شراء"],["exp","مصروف"]];
+  return `
+  <div class="topbar">${topRow()}</div>
+  <main>
+    <div class="sumblock gtot">${head}</div>
+    ${vb?"":`<button class="notice" data-act="nav" data-v="vault">الخزنة ما اشتغلت بعد — دوس هنا وسجّل الرصيد الافتتاحي</button>`}
+    <div class="actgrid">${Q.map(([k,l])=>`<button class="qbtn q-${k}" data-act="quick" data-q="${k}">${l}</button>`).join("")}</div>
+    <div class="daybar">
+      <button class="iconbtn" data-act="day" data-d="-1" aria-label="اليوم السابق">›</button>
+      <div class="daymid">
+        <input id="dayin" type="date" value="${d}" aria-label="اختيار اليوم">
+        <span>${isToday?"اليوم":dayName(d)}</span>
+      </div>
+      <button class="iconbtn" data-act="day" data-d="1" aria-label="اليوم التالي">‹</button>
+    </div>
+    ${isToday?"":`<button class="more" data-act="today">رجوع لليوم</button>`}
+    <div class="sumblock">${sum}
+      <div class="credline" data-t="cred">آجل انسجل هذا اليوم (دين، مو كاش): ${credLine0||`<b class="num">0</b>`}</div>
+    </div>
+    <div class="sechead pad">حركات ${isToday?"اليوم":dmy(d)} — ${day.length}</div>
+    ${day.length?`<div class="rows">${day.map(e=>dayRow(e,pm.get(e.partyId))).join("")}</div>`
+      :`<div class="empty">ماكو حركات بهذا اليوم.</div>`}
+  </main>`;
+}
+function dayName(iso){
+  try{return new Date(iso+"T12:00:00").toLocaleDateString("ar-IQ",{weekday:"long"})}catch(e){return""}
+}
+function dayRow(e,p,o){
+  o=o||{};
+  const voided=!!e.voided;
+  const fx=mainFx(Object.assign({},e,{voided:false}),p);
+  let amt;
+  if(e.kind==="fxx"&&e.fx)amt=`<b class="num neg">−${money(e.amount,e.cur)}</b><b class="num pos">+${money(e.fx.amount,e.fx.cur)}</b>`;
+  else if(fx.length){const [c,v]=fx[0];amt=`<b class="num ${v>0?"pos":"neg"}">${v>0?"+":"−"}${money(Math.abs(v),c)}</b>`}
+  else if(e.partyId===SYS.save&&e.kind!=="xfer"){amt=`<b class="num blu">${e.sign<0?"−":"+"}${money(e.amount,e.cur)}</b>`}
+  else amt=`<b class="num zero">${money(e.amount,e.cur)}</b><span>${e.kind==="work"?"دين":"بلا كاش"}</span>`;
+  const openable=p&&(TYPES[p.type]||p.type==="walkin");
+  const note=e.desc&&e.desc!==KLABEL[e.kind]&&e.desc!=="مصروف"?e.desc:"";
+  const title=o.noteAsName&&note?note:(p?p.name:"؟");
+  const sub=[];
+  if(o.date)sub.push(dmy(e.date));
+  sub.push(kindLabel(e,p));
+  if(e.fx&&e.kind!=="fxx")sub.push(fxLine(e));
+  if(note&&!o.noteAsName)sub.push(note);
+  return `<div class="drow ${voided?"e-void":""}">
+    <${openable?`button data-act="open" data-id="${p.id}"`:"div"} class="drow-main">
+      <div class="row-name">${esc(title)}</div>
+      <div class="row-sub">${esc(sub.join(" · "))}</div>
+    </${openable?"button":"div"}>
+    <div class="row-bal">${amt}
+      ${!voided&&!openable?`<button class="mini" data-act="void" data-id="${e.id}">إلغاء</button>`:""}</div>
+  </div>`;
+}
+
+/* ================= الأزرار الست ================= */
+function quickAction(q){
+  if(q==="exp")return expenseSheet("work");
+  const map={
+    cash:{title:"عمل مباشر — اختار الزبون",types:["customer"],kind:"cashwork",walkin:true},
+    credit:{title:"عمل آجل — اختار الزبون",types:["customer"],kind:"work"},
+    recv:{title:"استلام — من منو؟",types:["customer"],kind:"pay"},
+    pay:{title:"تسديد — لمنو؟",types:["supplier","worker"],kind:"pay"},
+    buy:{title:"شراء — من أي مورّد؟",types:["supplier"],kind:"buy"}
+  }[q];
+  pickParty(map,p=>entrySheet(p.id,null,{kind:map.kind}));
+}
+function pickParty(o,cb){
+  openSheet(`<div class="grab"></div><h2>${esc(o.title)}</h2>
+    <input id="pq" class="search" placeholder="دوّر بالاسم أو الرقم" autocomplete="off" style="margin:0 0 10px">
+    <div id="plist" class="plist"></div>
+    <div class="two" style="margin-top:12px">${o.types.map(t=>
+      `<button class="ghost" data-new="${t}">+ ${TYPES[t].one} جديد</button>`).join("")}</div>`);
+  const pick=async id=>{
+    let p=id===SYS.walkin?await sysParty(SYS.walkin):parties.find(x=>x.id===id);
+    closeSheet();if(p)cb(p);
+  };
+  function paint(){
+    const q=document.getElementById("pq").value.trim();
+    const list=parties.filter(p=>o.types.indexOf(p.type)>-1&&
+      (!q||p.name.indexOf(q)>-1||(p.phone||"").indexOf(q)>-1));
+    list.sort((a,b)=>{const x=lastAct.get(b.id)||b.created||"",y=lastAct.get(a.id)||a.created||"";return x<y?-1:x>y?1:0});
+    let html="";
+    if(o.walkin&&(!q||"زبائن يومي عابر".indexOf(q)>-1))
+      html+=`<button class="row pin" data-pid="${SYS.walkin}"><div class="row-main">
+        <div class="row-name">زبائن (يومي)</div><div class="row-sub">زبون عابر — يدفع بمكانه</div></div></button>`;
+    html+=list.slice(0,40).map(p=>{
+      const w=balWordShort(balanceOf(p.id)),c=p.cur||"IQD";
+      return `<button class="row" data-pid="${p.id}"><div class="row-main">
+        <div class="row-name">${esc(p.name)}</div><div class="row-sub">${TYPES[p.type].one}${p.phone?" · "+esc(p.phone):""}</div></div>
+        <div class="row-bal"><b class="num ${w.cls}">${money(w.n,c)}</b><span>${w.word}</span></div></button>`}).join("");
+    if(!html)html=`<div class="empty" style="padding:24px">${q?"ماكو نتيجة.":"ماكو حسابات بعد."}</div>`;
+    const box=document.getElementById("plist");box.innerHTML=html;
+    box.querySelectorAll("[data-pid]").forEach(b=>b.onclick=()=>pick(b.dataset.pid));
+  }
+  document.getElementById("pq").addEventListener("input",paint);
+  document.querySelectorAll("[data-new]").forEach(b=>b.onclick=()=>{
+    closeSheet();partySheet(null,{type:b.dataset.new,then:p=>cb(p)});
+  });
+  paint();
+  setTimeout(()=>{const i=document.getElementById("pq");if(i)i.focus()},60);
+}
+
+/* ================= حساب «زبائن» العام ================= */
+function walkinMonths(){
+  const m=new Map();
+  for(const e of entriesOf(SYS.walkin)){
+    if(!isLive(e)||e.kind!=="cashwork")continue;
+    const k=e.date.slice(0,7);m.set(k,(m.get(k)||0)+e.amount);
+  }
+  return m;
+}
+function walkinRow(){
+  if(!parties.some(p=>p.id===SYS.walkin)||view.q.trim())return"";
+  const m=walkinMonths().get(today().slice(0,7))||0;
+  return `<div class="rows"><button class="row pin" data-act="openwalkin">
+    <div class="row-main"><div class="row-name">زبائن (يومي)</div>
+      <div class="row-sub">الزبائن العابرين · رصيده دائماً صفر</div></div>
+    <div class="row-bal"><b class="num blu">${money(m,"IQD")}</b><span>شغل هذا الشهر</span></div></button></div>`;
+}
+function walkinView(p,withRun){
+  const m=walkinMonths(),cm=today().slice(0,7);
+  const months=[...m.keys()].sort().reverse();
+  return `
+  <div class="topbar"><div class="topbar-row">
+    <button class="back" data-act="back">‹ رجوع</button>
+  </div></div>
+  <main>
+    <div class="phead">
+      <div class="name">زبائن (يومي)</div>
+      <div class="meta">للزبائن العابرين اللي يدفعون بمكانهم · بلا رابط كشف · ما يصير مدين</div>
+      <div class="bigbal"><b class="num blu">${money(m.get(cm)||0,"IQD")}</b><em>شغل ${monthName(cm)}</em></div>
+    </div>
+    ${months.filter(k=>k!==cm).length?`<div class="rows">${months.filter(k=>k!==cm).map(k=>`<div class="row">
+      <div class="row-main"><div class="row-name">${monthName(k)}</div></div>
+      <div class="row-bal"><b class="num">${money(m.get(k),"IQD")}</b></div></div>`).join("")}</div>`:""}
+    ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,"IQD")).join(""):`<div class="empty">ماكو شغل مسجّل بعد.</div>`}
+  </main>
+  <div class="bottombar"><button class="primary" data-act="newentry" data-id="${p.id}">عمل مباشر</button></div>`;
+}
+
+/* ================= الخزنة ================= */
+function vaultView(){
+  const st=vaultStart(),vb=vaultBal(),sb=saveBal();
+  const hasSave=entriesOf(SYS.save).some(isLive);
+  const big=(b,cls,k)=>`<div class="sumrow">${["IQD","USD"].map(c=>`<div class="c"><span>${CUR[c].label}</span>
+      <b data-t="${k}-${c}" class="num ${b[c]<0?"neg":cls}">${b[c]<0?"−":""}${money(Math.abs(b[c]),c)}</b></div>`).join("")}</div>`;
+  const moves=entries.filter(e=>(e.partyId===SYS.vault||e.partyId===SYS.save)&&e.kind!=="void")
+    .sort((a,b)=>a.date===b.date?b.created.localeCompare(a.created):b.date.localeCompare(a.date)).slice(0,40);
+  const pm=pMap();
+  return `
+  <div class="topbar">${topRow()}</div>
+  <main>
+    <div class="sechead pad">الخزنة العامة</div>
+    ${st?`<div class="sumblock vbig">${big(vb,"blu","main")}</div>
+      <div class="hint pad">تنحسب من الحركات من يوم التشغيل ${dmy(st)} وطالع. التسديدات المسجلة بتاريخ أقدم منه ما تدخل.</div>
+      <div class="actgrid a3">
+        <button class="qbtn" data-act="vfx">تصريف</button>
+        <button class="qbtn" data-act="vcount" data-v="main">جرد</button>
+        <button class="qbtn" data-act="vxfer">تحويل</button>
+      </div>`
+    :`<div class="notice-box">الخزنة تبدي من يوم التشغيل: تعدّ الكاش الموجود فعلاً وتسجله كرصيد افتتاحي،
+      ومن ذاك اليوم كل استلام وتسديد ومصروف يتحرك عليها لحاله.
+      <button class="primary" data-act="vopen" style="width:100%;margin-top:12px">تشغيل الخزنة</button></div>`}
+    <div class="sechead pad" style="margin-top:18px">خزنة التوفير</div>
+    <div class="sumblock vbig">${big(sb,"blu","save")}</div>
+    <div class="hint pad">منفصلة تماماً. التحويل بينها وبين العامة ما ينحسب دخل ولا مصروف.</div>
+    <div class="actgrid a3">
+      ${hasSave?`<button class="qbtn" data-act="vcount" data-v="save">جرد التوفير</button>`
+        :`<button class="qbtn" data-act="sopen">رصيد افتتاحي</button>`}
+      ${st?`<button class="qbtn" data-act="vxfer">تحويل</button>`:""}
+    </div>
+    <div class="sechead pad" style="margin-top:18px">حركات الخزنتين</div>
+    ${moves.length?`<div class="rows">${moves.map(e=>dayRow(e,pm.get(e.partyId),{date:true})).join("")}</div>`
+      :`<div class="empty">ماكو حركات بعد.</div>`}
+  </main>`;
+}
+function amtField(id,label,val){
+  return `<div class="field"><label for="${id}">${label}</label>
+    <input id="${id}" class="amt-input" inputmode="decimal" placeholder="0" value="${val||""}">
+    <div class="amwords" id="${id}-w"></div></div>`;
+}
+function wireAmt(id,curFn){
+  const el=document.getElementById(id);liveGroup(el);
+  const w=()=>{const x=document.getElementById(id+"-w");if(x)x.textContent=liveWords(numOf(el.value),curFn())};
+  el.addEventListener("input",w);w();return w;
+}
+function curPicker(id,cur){
+  return `<div class="picker" id="${id}">${["IQD","USD"].map(k=>
+    `<button type="button" data-c="${k}" aria-pressed="${k===cur}">${CUR[k].label}</button>`).join("")}</div>`;
+}
+function wirePicker(id,attr,on){
+  const box=document.getElementById(id);
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));on(b.dataset[attr]);
+  });
+}
+function mkEntry(o){
+  const e=Object.assign({id:uid(),created:new Date().toISOString(),updated:Date.now(),synced:false,date:today()},o);
+  entries.push(e);addToIndex(e);return e;
+}
+async function commit(list,msg){
+  await putMany("entries",list);closeSheet();render();queueSync();if(msg)toast(msg);
+}
+function vaultOpenSheet(){
+  if(vaultStart())return;
+  openSheet(`<div class="grab"></div><h2>تشغيل الخزنة</h2>
+    <div class="hint" style="margin:-8px 0 16px">عدّ الكاش الموجود هسه بالخزنة واكتبه. من هذا التاريخ وطالع
+      كل استلام وتسديد ومصروف يتحرك على الخزنة. الحركات الأقدم ما تنحسب عليها.</div>
+    ${amtField("oi","الدينار الموجود")}
+    ${amtField("ou","الدولار الموجود")}
+    <div class="field"><label for="od">يوم التشغيل</label><input id="od" type="date" value="${today()}"></div>
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">تشغيل</button></div>`);
+  wireAmt("oi",()=>"IQD");wireAmt("ou",()=>"USD");
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=async()=>{
+    const iq=roundCur(numOf(document.getElementById("oi").value),"IQD");
+    const us=roundCur(numOf(document.getElementById("ou").value),"USD");
+    const date=document.getElementById("od").value||today();
+    await sysParty(SYS.vault);
+    /* الدينار ينسجل دائماً حتى لو صفر: هو اللي يحدد يوم التشغيل */
+    const list=[mkEntry({partyId:SYS.vault,kind:"open",sign:1,amount:iq,cur:"IQD",desc:"رصيد افتتاحي",date})];
+    if(us>0)list.push(mkEntry({partyId:SYS.vault,kind:"open",sign:1,amount:us,cur:"USD",desc:"رصيد افتتاحي",date}));
+    await commit(list,"اشتغلت الخزنة من "+dmy(date));
+  };
+}
+function saveOpenSheet(){
+  openSheet(`<div class="grab"></div><h2>رصيد افتتاحي — خزنة التوفير</h2>
+    ${amtField("si","الدينار الموجود")}${amtField("su2","الدولار الموجود")}
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">حفظ</button></div>`);
+  wireAmt("si",()=>"IQD");wireAmt("su2",()=>"USD");
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=async()=>{
+    const iq=roundCur(numOf(document.getElementById("si").value),"IQD");
+    const us=roundCur(numOf(document.getElementById("su2").value),"USD");
+    if(!iq&&!us){alert("اكتب مبلغ واحد على الأقل.");return}
+    await sysParty(SYS.save);
+    const list=[];
+    if(iq)list.push(mkEntry({partyId:SYS.save,kind:"open",sign:1,amount:iq,cur:"IQD",desc:"رصيد افتتاحي"}));
+    if(us)list.push(mkEntry({partyId:SYS.save,kind:"open",sign:1,amount:us,cur:"USD",desc:"رصيد افتتاحي"}));
+    await commit(list);
+  };
+}
+function countSheet(which){
+  const isMain=which!=="save";
+  if(isMain&&!vaultStart())return;
+  let cur="IQD";
+  const calc=()=>(isMain?vaultBal():saveBal())[cur];
+  openSheet(`<div class="grab"></div><h2>جرد ${isMain?"الخزنة العامة":"خزنة التوفير"}</h2>
+    <div class="field"><label>العملة</label>${curPicker("jc",cur)}</div>
+    <div class="conv" id="jcalc"></div>
+    <div style="height:14px"></div>
+    ${amtField("jn","المبلغ المعدود فعلياً")}
+    <div class="conv" id="jdiff">—</div>
+    <div style="height:16px"></div>
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">حفظ الجرد</button></div>`);
+  const w=wireAmt("jn",()=>cur);
+  const paint=()=>{
+    const c=calc();
+    document.getElementById("jcalc").innerHTML=`المحسوب ${money(c,cur)} <small>حسب الحركات المسجلة</small>`;
+    const raw=document.getElementById("jn").value.trim();
+    if(!raw){document.getElementById("jdiff").textContent="اكتب المبلغ المعدود";return}
+    const d=roundCur(numOf(raw)-c,cur);
+    document.getElementById("jdiff").innerHTML=!d?"مطابق — ماكو فرق":
+      `فرق ${d>0?"زيادة":"نقص"} ${money(Math.abs(d),cur)} <small>ينسجل كسطر «فرق جرد» ظاهر</small>`;
+  };
+  document.getElementById("jn").addEventListener("input",paint);
+  wirePicker("jc","c",c=>{cur=c;w();paint()});paint();
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=async()=>{
+    const raw=document.getElementById("jn").value.trim();
+    if(!raw){alert("اكتب المبلغ المعدود.");return}
+    const counted=roundCur(numOf(raw),cur),c=calc(),d=roundCur(counted-c,cur);
+    if(!d){closeSheet();toast("مطابق — ما انسجل فرق");return}
+    await sysParty(isMain?SYS.vault:SYS.save);
+    await commit([mkEntry({partyId:isMain?SYS.vault:SYS.save,kind:"adj",sign:d>0?1:-1,amount:Math.abs(d),cur,
+      desc:`فرق جرد: المحسوب ${money(c,cur)}، المعدود ${money(counted,cur)}`})],"انسجل فرق الجرد");
+  };
+}
+function exchangeSheet(){
+  if(!vaultStart())return;
+  let from="USD";
+  openSheet(`<div class="grab"></div><h2>تصريف</h2>
+    <div class="field"><label>شنو صرّفت؟</label>
+      <div class="picker" id="xd"><button type="button" data-f="USD" aria-pressed="true">دولار ← دينار</button>
+      <button type="button" data-f="IQD" aria-pressed="false">دينار ← دولار</button></div></div>
+    <div id="xamb"></div>
+    <div class="field"><label for="xr">سعر الصرف — دينار مقابل الدولار الواحد</label>
+      <input id="xr" class="rate-input" inputmode="decimal" value="${settings.lastRate||""}" placeholder="0">
+      <div class="conv" id="xcv">—</div></div>
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">حفظ</button></div>`);
+  liveGroup(document.getElementById("xr"));
+  const to=()=>other(from);
+  const res=()=>{const a=numOf(document.getElementById("xa").value),r=numOf(document.getElementById("xr").value);
+    if(!a||!r)return 0;return roundCur(from==="USD"?a*r:a/r,to())};
+  const paint=()=>{const v=res();document.getElementById("xcv").innerHTML=v?
+    `يطلع ${money(numOf(document.getElementById("xa").value),from)} ويدخل ${money(v,to())}`:"اكتب المبلغ والسعر"};
+  const amb=()=>{const old=document.getElementById("xa");const v=old?old.value:"";
+    document.getElementById("xamb").innerHTML=amtField("xa","المبلغ الطالع ("+CUR[from].label+")",v);
+    wireAmt("xa",()=>from);document.getElementById("xa").addEventListener("input",paint);paint()};
+  amb();
+  document.getElementById("xr").addEventListener("input",paint);
+  wirePicker("xd","f",f=>{from=f;amb()});
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=async()=>{
+    const a=roundCur(numOf(document.getElementById("xa").value),from),r=numOf(document.getElementById("xr").value),v=res();
+    if(a<=0||r<=0||v<=0){alert("اكتب المبلغ وسعر الصرف.");return}
+    const have=vaultBal()[from];
+    if(a>have&&!confirm(`المحسوب بالخزنة ${money(have,from)} بس. تسجل التصريف على أي حال؟`))return;
+    settings.lastRate=r;saveSettings();
+    await commit([mkEntry({partyId:SYS.vault,kind:"fxx",sign:-1,amount:a,cur:from,fx:{cur:to(),amount:v,rate:r},
+      desc:"تصريف"})],"انسجل التصريف");
+  };
+}
+function transferSheet(){
+  if(!vaultStart())return;
+  let dir=1,cur="IQD";
+  openSheet(`<div class="grab"></div><h2>تحويل بين الخزنتين</h2>
+    <div class="field"><label>الاتجاه</label>
+      <div class="picker" id="td"><button type="button" data-d="1" aria-pressed="true">العامة ← التوفير</button>
+      <button type="button" data-d="-1" aria-pressed="false">التوفير ← العامة</button></div></div>
+    <div class="field"><label>العملة</label>${curPicker("tc",cur)}</div>
+    ${amtField("ta","المبلغ")}
+    <div class="hint" style="margin:-6px 0 16px">ينقص من وحدة ويزيد بالثانية. ما ينحسب دخل ولا مصروف.</div>
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">تحويل</button></div>`);
+  const w=wireAmt("ta",()=>cur);
+  wirePicker("td","d",d=>{dir=+d});wirePicker("tc","c",c=>{cur=c;w()});
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=async()=>{
+    const a=roundCur(numOf(document.getElementById("ta").value),cur);
+    if(a<=0){alert("اكتب المبلغ.");return}
+    const have=(dir>0?vaultBal():saveBal())[cur];
+    if(a>have&&!confirm(`المحسوب بالمصدر ${money(have,cur)} بس. تكمل؟`))return;
+    await sysParty(SYS.save);
+    await commit([mkEntry({partyId:SYS.save,kind:"xfer",sign:dir,amount:a,cur,
+      desc:dir>0?"تحويل من العامة للتوفير":"تحويل من التوفير للعامة"})],"انسجل التحويل");
+  };
+}
+
+/* ================= المصاريف ================= */
+function expMonths(pid){
+  const m=new Map();
+  for(const e of entriesOf(pid)){
+    if(!isLive(e)||e.kind!=="exp")continue;
+    const k=e.date.slice(0,7);let o=m.get(k);if(!o){o={IQD:0,USD:0};m.set(k,o)}
+    o[e.cur]+=e.amount;
+  }
+  return m;
+}
+function expView(){
+  const cm=today().slice(0,7);
+  const W=expMonths(SYS.expWork),H=expMonths(SYS.expHome);
+  const z={IQD:0,USD:0};
+  const w=W.get(cm)||z,h=H.get(cm)||z;
+  const cell=(o,label,cat)=>`<button class="expcard" data-act="newexp" data-c="${cat}">
+      <span>${label}</span><b class="num neg" data-t="exp-${cat}">${money(o.IQD,"IQD")}</b>
+      ${o.USD?`<b class="num neg sm">${money(o.USD,"USD")}</b>`:""}<em>+ مصروف</em></button>`;
+  const past=[...new Set([...W.keys(),...H.keys()])].filter(k=>k!==cm).sort().reverse();
+  const fmt=o=>o?[o.IQD?money(o.IQD,"IQD"):"",o.USD?money(o.USD,"USD"):""].filter(Boolean).join(" · ")||"0":"0";
+  const pm=pMap();
+  const cur=[...entriesOf(SYS.expWork),...entriesOf(SYS.expHome)]
+    .filter(e=>e.kind!=="void"&&e.date.slice(0,7)===cm)
+    .sort((a,b)=>a.date===b.date?b.created.localeCompare(a.created):b.date.localeCompare(a.date));
+  return `
+  <div class="topbar">${topRow()}</div>
+  <main>
+    <div class="sechead pad">${monthName(cm)} — يبدي من صفر كل شهر</div>
+    <div class="expgrid">${cell(w,"الشغل","work")}${cell(h,"البيت","home")}</div>
+    ${past.length?`<div class="sechead pad" style="margin-top:18px">الأشهر السابقة — كل شهر لحاله</div>
+      <div class="stmt" style="padding-top:0"><table><thead><tr><th>الشهر</th><th class="n">الشغل</th><th class="n">البيت</th></tr></thead>
+      <tbody>${past.map(k=>`<tr><td>${monthName(k)}</td><td class="n num">${fmt(W.get(k))}</td><td class="n num">${fmt(H.get(k))}</td></tr>`).join("")}</tbody></table></div>`:""}
+    <div class="sechead pad" style="margin-top:18px">مصاريف هذا الشهر — ${cur.filter(isLive).length}</div>
+    ${cur.length?`<div class="rows">${cur.map(e=>dayRow(e,pm.get(e.partyId),{date:true,noteAsName:true})).join("")}</div>`
+      :`<div class="empty">ماكو مصاريف هذا الشهر.</div>`}
+  </main>
+  <div class="bottombar"><button class="primary" data-act="newexp" data-c="work">مصروف جديد</button></div>`;
+}
+function expenseSheet(cat){
+  let c=cat==="home"?"home":"work",cur="IQD";
+  openSheet(`<div class="grab"></div><h2>مصروف</h2>
+    <div class="field"><label>القسم</label>
+      <div class="picker" id="ec"><button type="button" data-k="work" aria-pressed="${c==="work"}">الشغل</button>
+      <button type="button" data-k="home" aria-pressed="${c==="home"}">البيت</button></div></div>
+    ${amtField("ea","المبلغ")}
+    <div class="field"><label>العملة</label>${curPicker("eu",cur)}</div>
+    <div class="field"><label for="en">ملاحظة (اختياري)</label><input id="en" autocomplete="off"></div>
+    <div class="field"><label for="ed">التاريخ</label><input id="ed" type="date" value="${today()}"></div>
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">حفظ</button></div>`);
+  const w=wireAmt("ea",()=>cur);
+  wirePicker("ec","k",k=>{c=k});wirePicker("eu","c",x=>{cur=x;w()});
+  document.getElementById("cancel").onclick=closeSheet;
+  document.getElementById("ok").onclick=async()=>{
+    const a=roundCur(numOf(document.getElementById("ea").value),cur);
+    if(a<=0){alert("اكتب المبلغ.");return}
+    const pid=c==="home"?SYS.expHome:SYS.expWork;
+    await sysParty(pid);
+    const date=document.getElementById("ed").value||today();
+    await commit([mkEntry({partyId:pid,kind:"exp",sign:-1,amount:a,cur,date,
+      desc:document.getElementById("en").value.trim()||"مصروف"})],
+      view.name==="journal"&&date!==(view.day||today())?"انسجل بيومية "+dmy(date):"انسجل المصروف");
+  };
+  setTimeout(()=>{const a=document.getElementById("ea");if(a)a.focus()},60);
+}
+
 /* ================= actions ================= */
 function onAct(ev){
   const el=ev.currentTarget,a=el.dataset.act,id=el.dataset.id;
-  if(a==="tab"){view.type=el.dataset.type;view.q="";view.limit=PAGE;history.replaceState(navState(),"");render()}
+  if(a==="nav"){view.name=view.top=el.dataset.v;view.q="";view.limit=PAGE;history.replaceState(navState(),"");render();window.scrollTo(0,0)}
+  else if(a==="day"){view.day=addDays(view.day||today(),+el.dataset.d);history.replaceState(navState(),"");render()}
+  else if(a==="today"){view.day=null;history.replaceState(navState(),"");render()}
+  else if(a==="quick")quickAction(el.dataset.q);
+  else if(a==="openwalkin"){sysParty(SYS.walkin).then(()=>go({name:"party",partyId:SYS.walkin}))}
+  else if(a==="vopen")vaultOpenSheet();
+  else if(a==="sopen")saveOpenSheet();
+  else if(a==="vcount")countSheet(el.dataset.v);
+  else if(a==="vfx")exchangeSheet();
+  else if(a==="vxfer")transferSheet();
+  else if(a==="newexp")expenseSheet(el.dataset.c);
+  else if(a==="tab"){view.type=el.dataset.type;view.q="";view.limit=PAGE;history.replaceState(navState(),"");render()}
   else if(a==="more"){view.limit+=PAGE;paintList()}
   else if(a==="open")go({name:"party",partyId:id});
   else if(a==="back")goBack();
@@ -700,8 +1322,9 @@ function openSheet(html){
 function closeSheet(){document.getElementById("layer").innerHTML="";document.body.style.overflow=""}
 function autogrow(ta){ta.style.height="auto";ta.style.height=Math.max(88,ta.scrollHeight)+"px"}
 
-function partySheet(p){
-  const isNew=!p,t=p?p.type:view.type;
+function partySheet(p,opt){
+  opt=opt||{};
+  const isNew=!p,t=p?p.type:(opt.type||view.type);
   let cur=p?(p.cur||"IQD"):"IQD";
   const locked=!!p&&entriesOf(p.id).length>0;
   openSheet(`
@@ -747,16 +1370,20 @@ function partySheet(p){
     else{target={id:uid(),type:t,name,phone,cur,rate,created:new Date().toISOString(),
       updated:Date.now(),synced:false};
       parties.push(target);byParty.set(target.id,[]);bal.set(target.id,0);
-      view.name="party";view.partyId=target.id;history.pushState(navState(),"")}
+      if(!opt.then){view.name="party";view.partyId=target.id;history.pushState(navState(),"")}}
     await put("parties",target);closeSheet();render();queueSync();
+    if(opt.then)opt.then(target);
   };
 }
 
-function entrySheet(pid,src){
+function entrySheet(pid,src,opt){
+  opt=opt||{};
   const p=parties.find(x=>x.id===pid);
   const base=p.cur||"IQD", alt=other(base);
-  const kinds=KINDS[p.type];
-  let kind=src?(src.kind==="void"?kinds[0].id:src.kind):kinds[0].id;
+  const all=KINDS[p.type]||[];
+  const kinds=opt.kind?all.filter(k=>k.id===opt.kind):all;
+  if(!kinds.length){alert("هذي الحركة ما تنفع على هذا الحساب.");return}
+  let kind=src&&kinds.some(k=>k.id===src.kind)?src.kind:kinds[0].id;
   let inCur=src&&src.fx?src.fx.cur:base;
   const isHours=()=>p.type==="worker"&&kind==="hours";
 
@@ -764,7 +1391,7 @@ function entrySheet(pid,src){
     <div class="grab"></div>
     <h2>${src?"تصحيح حركة":"حركة جديدة"} — ${esc(p.name)}</h2>
     ${src?`<div class="hint" style="margin:-8px 0 16px">راح ينلغي السطر القديم بقيد عكسي، وينضاف هذا بداله.</div>`:""}
-    <div class="field"><label>النوع</label>
+    <div class="field" ${kinds.length<2?'style="display:none"':""}><label>النوع</label>
       <div class="picker" id="kp">${kinds.map(k=>
         `<button type="button" data-k="${k.id}" aria-pressed="${k.id===kind}">${k.label}</button>`).join("")}</div></div>
     <div id="curbox"></div>
@@ -775,7 +1402,7 @@ function entrySheet(pid,src){
       <div class="amwords" id="amw"></div></div>
     <div id="fxbox"></div>
     <div class="field"><label for="ds">البيان</label>
-      <textarea id="ds" rows="3" placeholder="شنو الشغل؟">${esc(src?src.desc:"")}</textarea></div>
+      <textarea id="ds" rows="3" placeholder="${p.type==="worker"||kind==="pay"?"ملاحظة":"شنو الشغل؟"}">${esc(src?src.desc:"")}</textarea></div>
     <div class="field"><label for="dt">التاريخ</label>
       <input id="dt" type="date" value="${src?src.date:today()}"></div>
     <div class="two"><button class="ghost" id="cancel">إلغاء</button>
@@ -879,6 +1506,8 @@ function entrySheet(pid,src){
     const desc=document.getElementById("ds").value.trim();
     const date=document.getElementById("dt").value||today();
     const sign=kinds.find(k=>k.id===kind).sign;
+    /* حارس: حساب «زبائن» العام ما يصير مدين ولا دائن أبداً */
+    if(p.type==="walkin"&&kind!=="cashwork"){alert("حساب «زبائن» يقبل عمل مباشر بس.");return}
     const touched=[];
     if(src&&!src.voided)touched.push(src,makeVoid(src));
     const ent={id:uid(),partyId:pid,date,created:new Date().toISOString(),
@@ -888,7 +1517,10 @@ function entrySheet(pid,src){
     if(isHours())ent.rate=p.rate||0;
     entries.push(ent);addToIndex(ent);touched.push(ent);
     await putMany("entries",touched);
-    closeSheet();render();toBottom();queueSync();
+    closeSheet();render();
+    if(view.name==="party")toBottom();
+    else if(view.name==="journal"&&date!==(view.day||today()))toast("انسجلت بيومية "+dmy(date),3400);
+    queueSync();
   };
   setTimeout(()=>{const a=document.getElementById("am");if(a)a.focus()},60);
 }
@@ -1227,7 +1859,7 @@ function rDocView(){
 /* ================= navigation ================= */
 /* كل شاشة تنضاف لسجل المتصفح، حتى إيماءة الرجوع بالتلفون ترجع شاشة وحدة
    بدل ما تطلع من البرنامج كامل. */
-function navState(){return{name:view.name,partyId:view.partyId,type:view.type,rid:view.rid}}
+function navState(){return{name:view.name,partyId:view.partyId,type:view.type,rid:view.rid,day:view.day,top:view.top}}
 function toBottom(){
   const f=()=>window.scrollTo(0,document.documentElement.scrollHeight);
   f();requestAnimationFrame(f);setTimeout(f,60);   /* مرتين حتى تستقر أطوال السطور */
@@ -1239,8 +1871,8 @@ function go(st){
   render();land();
 }
 function goBack(){
-  if(history.state&&history.state.name&&history.state.name!=="home")history.back();
-  else{view.name="home";history.replaceState(navState(),"");render()}
+  if(history.state&&history.state.name&&TOP.indexOf(history.state.name)<0)history.back();
+  else{view.name=view.top||"journal";history.replaceState(navState(),"");render()}
 }
 window.addEventListener("popstate",ev=>{
   /* نافذة إدخال مفتوحة: الإيماءة ما تسكرها — تبقى لحد ما تدوس X */
@@ -1251,8 +1883,10 @@ window.addEventListener("popstate",ev=>{
     if(confirm("الإيصال ما انحفظ. تطلع وتخسر اللي كتبته؟")){draftDirty=false;draft=null;history.back()}
     return;
   }
-  const st=ev.state||{name:"home"};
-  view.name=st.name||"home";
+  const st=ev.state||{name:"journal"};
+  view.name=st.name||"journal";
+  if(st.top)view.top=st.top;
+  view.day=st.day||null;
   if(st.partyId)view.partyId=st.partyId;
   if(st.type)view.type=st.type;
   if(st.rid)view.rid=st.rid;
