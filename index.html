@@ -219,6 +219,7 @@ tfoot td{font-weight:700;font-size:15.5px;border-top:1.5px solid var(--line-stro
 .q-cash,.q-recv{border-color:var(--owed);color:var(--owed)}
 .q-pay,.q-buy,.q-exp{border-color:var(--due);color:var(--due)}
 .q-credit{border-color:var(--accent);color:var(--accent)}
+.q-mat{grid-column:1/-1;min-height:50px;border-color:var(--accent);color:var(--accent)}
 .notice{display:block;width:calc(100% - 28px);margin:12px 14px 0;padding:12px 14px;border-radius:10px;
   background:var(--shade);border:1.5px dashed var(--line-strong);font-size:14px;font-weight:500;color:var(--ink-2);text-align:start}
 .notice.warn{background:color-mix(in srgb,var(--due) 14%,var(--shade));border-color:var(--due);color:var(--due)}
@@ -320,7 +321,7 @@ const TYPES={
   worker:{label:"موظفين",one:"موظف"}
 };
 const KINDS={
-  customer:[{id:"work",label:"عمل آجل",sign:1},{id:"cashwork",label:"عمل نقدي",sign:0},{id:"pay",label:"استلام",sign:-1}],
+  customer:[{id:"work",label:"عمل آجل",sign:1},{id:"cashwork",label:"عمل نقدي",sign:0},{id:"custexp",label:"مواد للزبون",sign:1},{id:"pay",label:"استلام",sign:-1}],
   walkin:[{id:"cashwork",label:"عمل نقدي",sign:0}],
   supplier:[{id:"buy",label:"شراء",sign:-1},{id:"pay",label:"تسديد",sign:1}],
   worker:[{id:"hours",label:"ساعات عمل",sign:-1},{id:"pay",label:"دفعة / سلفة",sign:1}],
@@ -328,7 +329,7 @@ const KINDS={
   equip:[{id:"buyc",label:"شراء معدات",sign:0}]
 };
 const KLABEL={work:"عمل",pay:"تسديد",buy:"شراء",hours:"ساعات",void:"إلغاء",
-  cashwork:"عمل نقدي",exp:"مصروف",open:"رصيد افتتاحي",adj:"فرق جرد",fxx:"تصريف",xfer:"تحويل",buyc:"شراء معدات"};
+  cashwork:"عمل نقدي",exp:"مصروف",open:"رصيد افتتاحي",adj:"فرق جرد",fxx:"تصريف",xfer:"تحويل",buyc:"شراء معدات",custexp:"مواد للزبون"};
 /* أطراف النظام: معرّفات ثابتة، فلو انسوّت بجهازين تنضم لنفس السطر بالشيت بدل ما تتكرر */
 const SYS={walkin:"sys-walkin",vault:"sys-vault",save:"sys-save",expWork:"sys-exp-work",expHome:"sys-exp-home",equip:"sys-equip"};
 const SYSDEF={
@@ -707,6 +708,7 @@ function flowOf(e,p){
   }
   if(e.kind==="cashwork"){const a=cashOf(e);return[[a.cur,a.amt]]}
   if(e.kind==="exp"||e.kind==="buyc")return[[e.cur,-e.amount]];
+  if(e.kind==="custexp"){const a=cashOf(e);return[[a.cur,-a.amt]]}  /* اشتريت من جيبك للزبون: خزنة تنقص + دين عليه */
   return[];
 }
 /* كل أثر حركة على الخزنة العامة: [[العملة، المبلغ]] */
@@ -818,7 +820,7 @@ function journalView(){
       <div class="c"><span>الصافي</span><b class="num ${net>0?"pos":net<0?"neg":"zero"}" data-t="net-${c}">${net<0?"−":""}${money(Math.abs(net),c)}</b></div>`});
   const credLine0=["IQD","USD"].filter(c=>cred[c]).map(c=>`<b class="num">${money(cred[c],c)}</b> ${CUR[c].label}`).join(" · ");
 
-  const Q=[["cash","عمل نقدي"],["credit","عمل آجل"],["recv","استلام"],["pay","تسديد"],["buy","شراء"],["exp","مصروف"]];
+  const Q=[["cash","عمل نقدي"],["credit","عمل آجل"],["recv","استلام"],["pay","تسديد"],["buy","شراء"],["exp","مصروف"],["mat","مواد للزبون"]];
   return `
   <div class="topbar">${topRow()}</div>
   <main>
@@ -880,6 +882,7 @@ function quickAction(q){
   if(q==="exp")return expenseSheet("work");
   const map={
     cash:{title:"عمل نقدي — اختار الزبون",types:["customer"],kind:"cashwork",walkin:true},
+    mat:{title:"مواد للزبون — اشتريتها من جيبك لمنو؟",types:["customer"],kind:"custexp"},
     credit:{title:"عمل آجل — اختار الزبون",types:["customer"],kind:"work"},
     recv:{title:"استلام — من منو؟",types:["customer"],kind:"pay"},
     pay:{title:"تسديد — لمنو؟",types:["supplier","worker"],kind:"pay"},
