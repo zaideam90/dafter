@@ -138,6 +138,7 @@ main{flex:1;padding-bottom:104px}
 .dot.pend{background:#C98A22}
 .dot.err{background:var(--due)}
 .dot.busy{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+.dot.stale{background:var(--due)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 .toast{position:fixed;inset-inline:0;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:50;
   display:flex;justify-content:center;pointer-events:none}
@@ -149,6 +150,8 @@ main{flex:1;padding-bottom:104px}
 .primary{flex:1;min-height:52px;border-radius:11px;background:var(--accent);color:var(--accent-ink);
   font-size:16.5px;font-weight:600}
 .primary:active{filter:brightness(.92)}
+.primary:disabled{opacity:.4;filter:none}
+.picker button.hint-pick{border-color:var(--accent)}
 
 .sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(9,16,20,.55);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:560px;max-height:94dvh;overflow-y:auto;background:var(--surface);
@@ -218,6 +221,7 @@ tfoot td{font-weight:700;font-size:15.5px;border-top:1.5px solid var(--line-stro
 .q-credit{border-color:var(--accent);color:var(--accent)}
 .notice{display:block;width:calc(100% - 28px);margin:12px 14px 0;padding:12px 14px;border-radius:10px;
   background:var(--shade);border:1.5px dashed var(--line-strong);font-size:14px;font-weight:500;color:var(--ink-2);text-align:start}
+.notice.warn{background:color-mix(in srgb,var(--due) 14%,var(--shade));border-color:var(--due);color:var(--due)}
 .notice-box{margin:0 14px;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);
   font-size:14.5px;line-height:1.7;color:var(--ink-2)}
 .daybar{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface);
@@ -240,6 +244,7 @@ button.drow-main:active{background:var(--shade)}
 .drow.e-void{opacity:.45}
 .drow.e-void .row-name,.drow.e-void .row-bal b{text-decoration:line-through}
 .mini{font-size:12.5px;color:var(--accent);font-weight:500;min-height:34px;padding-inline:8px;border-radius:7px}
+.row-tools{display:flex;gap:4px;justify-content:flex-end}
 .mini:active{background:var(--shade)}
 .row.pin{background:var(--shade)}
 .plist{border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:52dvh;overflow-y:auto}
@@ -315,21 +320,24 @@ const TYPES={
   worker:{label:"موظفين",one:"موظف"}
 };
 const KINDS={
-  customer:[{id:"work",label:"عمل آجل",sign:1},{id:"cashwork",label:"عمل مباشر",sign:0},{id:"pay",label:"تسديد",sign:-1}],
-  walkin:[{id:"cashwork",label:"عمل مباشر",sign:0}],
+  customer:[{id:"work",label:"عمل آجل",sign:1},{id:"cashwork",label:"عمل نقدي",sign:0},{id:"pay",label:"استلام",sign:-1}],
+  walkin:[{id:"cashwork",label:"عمل نقدي",sign:0}],
   supplier:[{id:"buy",label:"شراء",sign:-1},{id:"pay",label:"تسديد",sign:1}],
-  worker:[{id:"hours",label:"ساعات عمل",sign:-1},{id:"pay",label:"دفعة / سلفة",sign:1}]
+  worker:[{id:"hours",label:"ساعات عمل",sign:-1},{id:"pay",label:"دفعة / سلفة",sign:1}],
+  expense:[{id:"exp",label:"مصروف",sign:-1}],
+  equip:[{id:"buyc",label:"شراء معدات",sign:0}]
 };
 const KLABEL={work:"عمل",pay:"تسديد",buy:"شراء",hours:"ساعات",void:"إلغاء",
-  cashwork:"عمل مباشر",exp:"مصروف",open:"رصيد افتتاحي",adj:"فرق جرد",fxx:"تصريف",xfer:"تحويل"};
+  cashwork:"عمل نقدي",exp:"مصروف",open:"رصيد افتتاحي",adj:"فرق جرد",fxx:"تصريف",xfer:"تحويل",buyc:"شراء معدات"};
 /* أطراف النظام: معرّفات ثابتة، فلو انسوّت بجهازين تنضم لنفس السطر بالشيت بدل ما تتكرر */
-const SYS={walkin:"sys-walkin",vault:"sys-vault",save:"sys-save",expWork:"sys-exp-work",expHome:"sys-exp-home"};
+const SYS={walkin:"sys-walkin",vault:"sys-vault",save:"sys-save",expWork:"sys-exp-work",expHome:"sys-exp-home",equip:"sys-equip"};
 const SYSDEF={
   "sys-walkin":{type:"walkin",name:"زبائن (يومي)"},
   "sys-vault":{type:"vault",name:"الخزنة العامة"},
   "sys-save":{type:"vault",name:"خزنة التوفير"},
   "sys-exp-work":{type:"expense",name:"مصاريف الشغل"},
-  "sys-exp-home":{type:"expense",name:"مصاريف البيت"}
+  "sys-exp-home":{type:"expense",name:"مصاريف البيت"},
+  "sys-equip":{type:"equip",name:"عدة الشغل"}
 };
 const MONTHS=["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
 const TOP=["journal","home","vault","exp"];
@@ -533,6 +541,8 @@ function homeView(){
       <button data-act="sort" data-s="alpha" aria-pressed="${settings.sort==="alpha"}">أبجدي</button>
     </div>
     ${t==="customer"?walkinRow():""}
+    ${t==="supplier"?equipRow():""}
+    ${t==="worker"?workerTabSummary():""}
     <div id="listholder">${partyRows()}</div>
   </main>
   <div class="bottombar">
@@ -583,6 +593,7 @@ function partyView(){
   let run=0;
   const withRun=es.map(e=>{run+=e.sign*e.amount;return{e,run:Math.round(run*100)/100}}); /* الأقدم فوق مثل الدفتر */
   if(p.type==="walkin")return walkinView(p,withRun);
+  if(p.type==="equip")return equipView(p,withRun);
   const meta=[TYPES[p.type].one,"حساب بال"+CUR[c].label];
   if(p.phone)meta.splice(1,0,p.phone);
   if(p.type==="worker"&&p.rate)meta.push(money(p.rate,c)+" للساعة");
@@ -601,7 +612,8 @@ function partyView(){
         <button class="ghost" data-act="share" data-id="${p.id}">رابط للزبون</button>
       </div>
     </div>
-    ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,c)).join(""):
+    ${p.type==="worker"?workerMonthsTable(p):""}
+    ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,c,p)).join(""):
       `<div class="empty">ماكو حركات بعد.<br>دوس «أضف حركة» تحت.</div>`}
   </main>
   <div class="bottombar">
@@ -609,16 +621,17 @@ function partyView(){
   </div>`;
 }
 
-function entryRow(e,run,c){
+function entryRow(e,run,c,p){
   const voided=!!e.voided||e.kind==="void";
   const cls=voided?"e-void":(e.sign>0?"e-pos":e.sign<0?"e-neg":"e-cash");
   const rw=balWordShort(run);
   const fx=fxLine(e);
+  const kl=kindLabel(e,p);
   return `<div class="entry ${cls}">
     <div class="e-main">
-      <div class="e-desc">${esc(e.desc||KLABEL[e.kind]||"")}</div>
+      <div class="e-desc">${esc(e.desc||kl)}</div>
       ${fx?`<div class="e-fx num">${fx}</div>`:""}
-      <div class="e-meta"><span>${dmy(e.date)}</span><span>${KLABEL[e.kind]||""}</span></div>
+      <div class="e-meta"><span>${dmy(e.date)}</span><span>${kl}</span></div>
       ${voided?"":`<div class="e-tools">
         <button data-act="correct" data-id="${e.id}">تصحيح</button>
         <button data-act="void" data-id="${e.id}">إلغاء</button></div>`}
@@ -641,7 +654,7 @@ function stmtView(){
     const fx=fxLine(e);
     return `<tr>
       <td class="num">${dmy(e.date)}</td>
-      <td>${esc(e.desc||KLABEL[e.kind]||"")}${fx?`<small class="num">${fx}</small>`:""}</td>
+      <td>${esc(e.desc||kindLabel(e,p))}${fx?`<small class="num">${fx}</small>`:""}</td>
       <td class="n num">${e.sign>0||e.kind==="cashwork"?money(e.amount,c):""}</td>
       <td class="n num">${e.sign<0||e.kind==="cashwork"?money(e.amount,c):""}</td>
       <td class="n num">${money(Math.abs(Math.round(run*100)/100),c)}</td>
@@ -681,7 +694,7 @@ const addDays=(iso,n)=>{const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+
 const monthName=ym=>{const [y,m]=ym.split("-");return MONTHS[+m-1]+" "+y};
 function pMap(){return new Map(parties.map(p=>[p.id,p]))}
 
-/* شغل الورشة الفعلي اللي يحرك الكاش: استلام، تسديد، عمل مباشر، مصروف.
+/* شغل الورشة الفعلي اللي يحرك الكاش: استلام، تسديد، عمل نقدي، مصروف.
    التصريف والتحويل والجرد والافتتاحي حركات داخلية — ما تنحسب دخل ولا مصروف. */
 function flowOf(e,p){
   if(!isLive(e))return[];
@@ -693,7 +706,7 @@ function flowOf(e,p){
     return[];
   }
   if(e.kind==="cashwork"){const a=cashOf(e);return[[a.cur,a.amt]]}
-  if(e.kind==="exp")return[[e.cur,-e.amount]];
+  if(e.kind==="exp"||e.kind==="buyc")return[[e.cur,-e.amount]];
   return[];
 }
 /* كل أثر حركة على الخزنة العامة: [[العملة، المبلغ]] */
@@ -805,12 +818,13 @@ function journalView(){
       <div class="c"><span>الصافي</span><b class="num ${net>0?"pos":net<0?"neg":"zero"}" data-t="net-${c}">${net<0?"−":""}${money(Math.abs(net),c)}</b></div>`});
   const credLine0=["IQD","USD"].filter(c=>cred[c]).map(c=>`<b class="num">${money(cred[c],c)}</b> ${CUR[c].label}`).join(" · ");
 
-  const Q=[["cash","عمل مباشر"],["credit","عمل آجل"],["recv","استلام"],["pay","تسديد"],["buy","شراء"],["exp","مصروف"]];
+  const Q=[["cash","عمل نقدي"],["credit","عمل آجل"],["recv","استلام"],["pay","تسديد"],["buy","شراء"],["exp","مصروف"]];
   return `
   <div class="topbar">${topRow()}</div>
   <main>
     <div class="sumblock gtot">${head}</div>
     ${vb?"":`<button class="notice" data-act="nav" data-v="vault">الخزنة ما اشتغلت بعد — دوس هنا وسجّل الرصيد الافتتاحي</button>`}
+    ${syncStale()?`<button class="notice warn" data-act="settings">⚠ ${settings.lastSyncAt?"ما زامنت من يوم أو أكثر":"ما زامنت أبداً"} — تأكد من الإنترنت أو افتح الإعدادات</button>`:""}
     <div class="actgrid">${Q.map(([k,l])=>`<button class="qbtn q-${k}" data-act="quick" data-q="${k}">${l}</button>`).join("")}</div>
     <div class="daybar">
       <button class="iconbtn" data-act="day" data-d="-1" aria-label="اليوم السابق">›</button>
@@ -855,7 +869,9 @@ function dayRow(e,p,o){
       <div class="row-sub">${esc(sub.join(" · "))}</div>
     </${openable?"button":"div"}>
     <div class="row-bal">${amt}
-      ${!voided&&!openable?`<button class="mini" data-act="void" data-id="${e.id}">إلغاء</button>`:""}</div>
+      ${!voided&&!openable?`<div class="row-tools">
+        ${e.kind==="exp"?`<button class="mini" data-act="correct" data-id="${e.id}">تصحيح</button>`:""}
+        <button class="mini" data-act="void" data-id="${e.id}">إلغاء</button></div>`:""}</div>
   </div>`;
 }
 
@@ -863,7 +879,7 @@ function dayRow(e,p,o){
 function quickAction(q){
   if(q==="exp")return expenseSheet("work");
   const map={
-    cash:{title:"عمل مباشر — اختار الزبون",types:["customer"],kind:"cashwork",walkin:true},
+    cash:{title:"عمل نقدي — اختار الزبون",types:["customer"],kind:"cashwork",walkin:true},
     credit:{title:"عمل آجل — اختار الزبون",types:["customer"],kind:"work"},
     recv:{title:"استلام — من منو؟",types:["customer"],kind:"pay"},
     pay:{title:"تسديد — لمنو؟",types:["supplier","worker"],kind:"pay"},
@@ -940,9 +956,83 @@ function walkinView(p,withRun){
     ${months.filter(k=>k!==cm).length?`<div class="rows">${months.filter(k=>k!==cm).map(k=>`<div class="row">
       <div class="row-main"><div class="row-name">${monthName(k)}</div></div>
       <div class="row-bal"><b class="num">${money(m.get(k),"IQD")}</b></div></div>`).join("")}</div>`:""}
-    ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,"IQD")).join(""):`<div class="empty">ماكو شغل مسجّل بعد.</div>`}
+    ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,"IQD",p)).join(""):`<div class="empty">ماكو شغل مسجّل بعد.</div>`}
   </main>
-  <div class="bottombar"><button class="primary" data-act="newentry" data-id="${p.id}">عمل مباشر</button></div>`;
+  <div class="bottombar"><button class="primary" data-act="newentry" data-id="${p.id}">عمل نقدي</button></div>`;
+}
+
+/* ================= عدة الشغل — أدوات ومعدات دائمة ================= */
+function equipTotals(){
+  const t={IQD:0,USD:0};
+  for(const e of entriesOf(SYS.equip))if(isLive(e)&&e.kind==="buyc")t[e.cur]+=e.amount;
+  t.IQD=roundCur(t.IQD,"IQD");t.USD=roundCur(t.USD,"USD");
+  return t;
+}
+function equipLine(){
+  const t=equipTotals();
+  return money(t.IQD,"IQD")+(t.USD?" + "+money(t.USD,"USD"):"");
+}
+function equipRow(){
+  if(view.q.trim())return""; /* بعكس زبائن يومي، هذا الصف هو المدخل الوحيد لحساب عدة الشغل */
+  return `<div class="rows"><button class="row pin" data-act="openequip">
+    <div class="row-main"><div class="row-name">عدة الشغل</div>
+      <div class="row-sub">أدوات ومعدات دائمة · رصيده دائماً صفر</div></div>
+    <div class="row-bal"><b class="num blu">${equipLine()}</b><span>المجموع من البداية</span></div></button></div>`;
+}
+function equipView(p,withRun){
+  return `
+  <div class="topbar"><div class="topbar-row">
+    <button class="back" data-act="back">‹ رجوع</button>
+  </div></div>
+  <main>
+    <div class="phead">
+      <div class="name">عدة الشغل</div>
+      <div class="meta">أدوات ومعدات دائمة تبقى بالورشة (دريل، براغي، مكينة...) · بلا رابط كشف · ما يصير مدين</div>
+      <div class="bigbal"><b class="num blu">${equipLine()}</b><em>المجموع من البداية — بلا تصفير شهري</em></div>
+    </div>
+    ${withRun.length?withRun.map(x=>entryRow(x.e,x.run,"IQD",p)).join(""):`<div class="empty">ماكو شراء مسجّل بعد.</div>`}
+  </main>
+  <div class="bottombar"><button class="primary" data-act="newentry" data-id="${p.id}">شراء معدات</button></div>`;
+}
+
+/* ================= الموظفين شهرياً ================= */
+function workerMonths(pid){
+  const m=new Map();
+  for(const e of entriesOf(pid)){
+    if(!isLive(e))continue;
+    const k=e.date.slice(0,7);let o=m.get(k);if(!o){o={due:0,paid:0};m.set(k,o)}
+    if(e.kind==="hours")o.due+=e.amount;
+    else if(e.kind==="pay")o.paid+=e.amount;
+  }
+  return m;
+}
+function workerMonthsTable(p){
+  const m=workerMonths(p.id);
+  const months=[...m.keys()].sort().reverse();
+  if(!months.length)return"";
+  const c=p.cur||"IQD";
+  const rows=months.map(k=>{const o=m.get(k);
+    return `<tr><td>${monthName(k)}</td><td class="n num">${money(o.due,c)}</td><td class="n num">${money(o.paid,c)}</td></tr>`}).join("");
+  return `<div class="sechead pad">الأجور شهرياً</div>
+    <div class="stmt" style="padding-top:0"><table><thead><tr><th>الشهر</th><th class="n">مستحق (ساعات)</th><th class="n">انطيته</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+function workerTabSummary(){
+  const workers=parties.filter(x=>x.type==="worker");
+  if(!workers.length||view.q.trim())return"";
+  const cm=today().slice(0,7),totals={};
+  workers.forEach(p=>{
+    const o=workerMonths(p.id).get(cm);if(!o)return;
+    const c=p.cur||"IQD";totals[c]=totals[c]||{due:0,paid:0};
+    totals[c].due+=o.due;totals[c].paid+=o.paid;
+  });
+  const curs=Object.keys(totals);
+  if(!curs.length)return"";
+  const line=curs.map(c=>`${money(totals[c].paid,c)} / ${money(totals[c].due,c)}`).join(" · ");
+  return `<div class="rows"><div class="row pin">
+    <div class="row-main"><div class="row-name">أجور ${monthName(cm)}</div>
+      <div class="row-sub">انطيته / المستحق — كل الموظفين</div></div>
+    <div class="row-bal"><b class="num">${line}</b></div></div></div>`;
 }
 
 /* ================= الخزنة ================= */
@@ -1182,20 +1272,24 @@ function expView(){
   <div class="bottombar"><button class="primary" data-act="newexp" data-c="work">مصروف جديد</button></div>`;
 }
 function expenseSheet(cat){
-  let c=cat==="home"?"home":"work",cur="IQD";
+  /* بلا قسم افتراضي: المستخدم لازم يدوس وحدة بإيده حتى ما ينسجل بالغلط بقسم غير مقصود.
+     cat (من كارد قسم معيّن) يخلي زره يبرز شوي بس ما يفعّله لحاله. */
+  let c=null,cur="IQD";
   openSheet(`<div class="grab"></div><h2>مصروف</h2>
-    <div class="field"><label>القسم</label>
-      <div class="picker" id="ec"><button type="button" data-k="work" aria-pressed="${c==="work"}">الشغل</button>
-      <button type="button" data-k="home" aria-pressed="${c==="home"}">البيت</button></div></div>
+    <div class="field"><label>القسم — دوس وحدة</label>
+      <div class="picker" id="ec"><button type="button" class="${cat==="work"?"hint-pick":""}" data-k="work" aria-pressed="false">الشغل</button>
+      <button type="button" class="${cat==="home"?"hint-pick":""}" data-k="home" aria-pressed="false">البيت</button></div></div>
     ${amtField("ea","المبلغ")}
     <div class="field"><label>العملة</label>${curPicker("eu",cur)}</div>
     <div class="field"><label for="en">ملاحظة (اختياري)</label><input id="en" autocomplete="off"></div>
     <div class="field"><label for="ed">التاريخ</label><input id="ed" type="date" value="${today()}"></div>
-    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok">حفظ</button></div>`);
+    <div class="two"><button class="ghost" id="cancel">إلغاء</button><button class="primary" id="ok" disabled>حفظ</button></div>`);
   const w=wireAmt("ea",()=>cur);
-  wirePicker("ec","k",k=>{c=k});wirePicker("eu","c",x=>{cur=x;w()});
+  wirePicker("ec","k",k=>{c=k;document.getElementById("ok").disabled=false});
+  wirePicker("eu","c",x=>{cur=x;w()});
   document.getElementById("cancel").onclick=closeSheet;
   document.getElementById("ok").onclick=async()=>{
+    if(!c){alert("دوس قسم: الشغل لو البيت.");return}
     const a=roundCur(numOf(document.getElementById("ea").value),cur);
     if(a<=0){alert("اكتب المبلغ.");return}
     const pid=c==="home"?SYS.expHome:SYS.expWork;
@@ -1216,6 +1310,7 @@ function onAct(ev){
   else if(a==="today"){view.day=null;history.replaceState(navState(),"");render()}
   else if(a==="quick")quickAction(el.dataset.q);
   else if(a==="openwalkin"){sysParty(SYS.walkin).then(()=>go({name:"party",partyId:SYS.walkin}))}
+  else if(a==="openequip"){sysParty(SYS.equip).then(()=>go({name:"party",partyId:SYS.equip}))}
   else if(a==="vopen")vaultOpenSheet();
   else if(a==="sopen")saveOpenSheet();
   else if(a==="vcount")countSheet(el.dataset.v);
@@ -1507,11 +1602,11 @@ function entrySheet(pid,src,opt){
     const date=document.getElementById("dt").value||today();
     const sign=kinds.find(k=>k.id===kind).sign;
     /* حارس: حساب «زبائن» العام ما يصير مدين ولا دائن أبداً */
-    if(p.type==="walkin"&&kind!=="cashwork"){alert("حساب «زبائن» يقبل عمل مباشر بس.");return}
+    if(p.type==="walkin"&&kind!=="cashwork"){alert("حساب «زبائن» يقبل عمل نقدي بس.");return}
     const touched=[];
     if(src&&!src.voided)touched.push(src,makeVoid(src));
     const ent={id:uid(),partyId:pid,date,created:new Date().toISOString(),
-      kind,sign,amount,cur:base,desc:desc||KLABEL[kind],
+      kind,sign,amount,cur:base,desc:desc||kindLabel({kind},p),
       updated:Date.now(),synced:false};
     if(fx)ent.fx=fx;
     if(isHours())ent.rate=p.rate||0;
@@ -1970,6 +2065,10 @@ function pendingCount(){
   for(const e of entries)if(!e.synced)n++;
   return n;
 }
+const STALE_MS=24*3600*1000; /* يوم كامل بلا مزامنة ناجحة — تنبيه واضح */
+function syncStale(){
+  return !!settings.syncUrl&&(!settings.lastSyncAt||Date.now()-settings.lastSyncAt>STALE_MS);
+}
 function syncBadge(){
   if(!settings.syncUrl)return `<button class="syncbtn" id="sb" data-act="sync" title="المزامنة">
     <span class="dot"></span><span>مو مربوط</span></button>`;
@@ -1979,6 +2078,8 @@ function syncBadge(){
   else if(syncState==="err"){cls="err";txt="ما زامن"}
   else if(!navigator.onLine){cls="pend";txt=n?n+" بالانتظار":"أوفلاين"}
   else if(n){cls="pend";txt=n+" بالانتظار"}
+  if(cls==="ok"&&syncStale()){cls="stale";
+    txt=settings.lastSyncAt?"ما زامنت من "+Math.floor((Date.now()-settings.lastSyncAt)/86400000)+" يوم":"ما زامنت أبداً";}
   return `<button class="syncbtn" id="sb" data-act="sync" title="${esc(syncMsg||"")}">
     <span class="dot ${cls}"></span><span>${txt}</span></button>`;
 }
@@ -2005,6 +2106,7 @@ function queueSync(){
   if(!settings.syncUrl)return;
   clearTimeout(syncTimer);
   syncTimer=setTimeout(()=>doSync(false),2500);
+  registerBackgroundSync();
   paintBadge();
 }
 
@@ -2064,7 +2166,7 @@ async function doSync(manual){
     settings.lastPull=out.now;
     settings.lastSyncAt=Date.now();
     await saveSettings();
-    syncState="ok";syncMsg="";
+    syncState="ok";syncMsg="";retryIdx=0;clearTimeout(retryTimer);
     const up=wrP.length+wrE.length;
     if(manual)toast(up?`تمت المزامنة — ${pushP.length+pushE.length} مرفوعة، ${newE} واصلة`:"كل شي متزامن");
     render();
@@ -2073,10 +2175,32 @@ async function doSync(manual){
     console.error("sync failed",err);
     if(manual)toast("فشلت المزامنة: "+syncMsg,5000);
     paintBadge();
+    scheduleRetry();
   }
 }
-window.addEventListener("online",()=>{paintBadge();doSync(false)});
+/* إعادة محاولة تلقائية بفواصل متصاعدة لحد ما تنجح: 30ث، 2د، 5د، 10د... */
+const RETRY_DELAYS=[30,120,300,600,900];
+let retryIdx=0,retryTimer=null;
+function scheduleRetry(){
+  if(!settings.syncUrl||!navigator.onLine)return; /* يرجع لحاله مع حدث online */
+  clearTimeout(retryTimer);
+  const secs=RETRY_DELAYS[Math.min(retryIdx,RETRY_DELAYS.length-1)];
+  retryIdx++;
+  retryTimer=setTimeout(()=>doSync(false),secs*1000);
+  registerBackgroundSync();
+}
+function registerBackgroundSync(){
+  /* طبقة أمان إضافية: حتى لو انسكّر التطبيق، كروم/أندرويد يحاول يرفع المعلّق لحاله */
+  if(!("serviceWorker" in navigator)||!("SyncManager" in window))return;
+  navigator.serviceWorker.ready.then(reg=>reg.sync.register("daftar-sync")).catch(()=>{});
+}
+window.addEventListener("online",()=>{retryIdx=0;clearTimeout(retryTimer);paintBadge();doSync(false)});
 window.addEventListener("offline",paintBadge);
+/* مزامنة عند الرجوع للشاشة — التطبيق يبقى بالذاكرة ولا ينفتح من جديد غالباً */
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"&&settings.syncUrl&&syncState!=="busy"){paintBadge();doSync(false)}
+});
+setInterval(()=>{if(document.visibilityState==="visible")paintBadge();},5*60*1000); /* يحدّث تنبيه «يوم بلا مزامنة» حتى بلا أي حدث */
 
 /* ================= service worker ================= */
 if("serviceWorker" in navigator&&location.protocol!=="file:"){
